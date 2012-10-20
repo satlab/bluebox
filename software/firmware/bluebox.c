@@ -46,30 +46,37 @@ void EVENT_USB_Device_ControlRequest(void)
 	}
 }
 
-static uint8_t data[IN_EPSIZE] = "testing";
+uint8_t text[IN_EPSIZE] = "testing";
 
 void BBTask(void)
 {
 	if (USB_DeviceState != DEVICE_STATE_Configured)
 		return;
 
-	Endpoint_SelectEndpoint(IN_EPADDR);
-	if (Endpoint_IsReadWriteAllowed()) {
-		Endpoint_Write_Stream_LE(&data, sizeof(data), NULL);
-		Endpoint_ClearIN();
-	}
-
 	Endpoint_SelectEndpoint(OUT_EPADDR);
 	if (Endpoint_IsOUTReceived()) {
-		Endpoint_Read_Stream_LE(&data, sizeof(data), NULL);
+		if (Endpoint_IsReadWriteAllowed()) {
+			memset(text, 0, sizeof(text));
+			Endpoint_Read_Stream_LE(&text, sizeof(text), NULL);
+		}
 		Endpoint_ClearOUT();
-	}	
+		LEDs_TurnOffLEDs(LEDS_LED1);
+	}
+
+	Endpoint_SelectEndpoint(IN_EPADDR);
+	if (Endpoint_IsINReady()) {
+		Endpoint_Write_Stream_LE(&text, sizeof(text), NULL);
+		Endpoint_ClearIN();
+		LEDs_TurnOnLEDs(LEDS_LED1);
+	}
 }
 
 int main(void)
 {
 	SetupHardware();
 	GlobalInterruptEnable();
+
+	LEDs_TurnOnLEDs(LEDS_LED1);
 
 	for (;;) {
 		BBTask();

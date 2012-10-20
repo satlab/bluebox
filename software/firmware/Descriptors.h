@@ -41,10 +41,10 @@
 #include <avr/pgmspace.h>
 #include <LUFA/Drivers/USB/USB.h>
 
-#define IN_EPADDR	(ENDPOINT_DIR_IN | 1)
+#define IN_EPADDR	(ENDPOINT_DIR_IN  | 1)
 #define OUT_EPADDR	(ENDPOINT_DIR_OUT | 2)
-#define IN_EPSIZE	8
-#define OUT_EPSIZE	8
+#define IN_EPSIZE	64
+#define OUT_EPSIZE	64
 
 /* Type Defines: */
 /** Type define for the device configuration descriptor structure. This must be defined in the

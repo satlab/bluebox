@@ -30,6 +30,7 @@
 */
 
 #include "Descriptors.h"
+#include "bluebox.h"
 
 const USB_Descriptor_Device_t PROGMEM BlueBox_DeviceDescriptor = {
 	.Header                 = {.Size = sizeof(USB_Descriptor_Device_t), .Type = DTYPE_Device},
@@ -85,7 +86,7 @@ const USB_Descriptor_Configuration_t PROGMEM BlueBox_ConfigurationDescriptor =
 		.EndpointAddress        = IN_EPADDR,
 		.Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
 		.EndpointSize           = IN_EPSIZE,
-		.PollingIntervalMS      = 0x01
+		.PollingIntervalMS      = 0x05,
 	},
 
 	.DataOutEndpoint = {
@@ -122,11 +123,11 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 				    const uint8_t wIndex,
 				    const void** const DescriptorAddress)
 {
-	const uint8_t  DescriptorType   = (wValue >> 8);
-	const uint8_t  DescriptorNumber = (wValue & 0xFF);
+	const uint8_t DescriptorType   = (wValue >> 8);
+	const uint8_t DescriptorNumber = (wValue & 0xFF);
 
-	const void* Address = NULL;
-	uint16_t    Size    = NO_DESCRIPTOR;
+	const void *Address = NULL;
+	uint16_t Size = NO_DESCRIPTOR;
 
 	switch (DescriptorType) {
 	case DTYPE_Device:
@@ -167,8 +168,6 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 
 void EVENT_USB_Device_ConfigurationChanged(void)
 {
-	int succ = 1;
-
-	succ &= Endpoint_ConfigureEndpoint(IN_EPADDR, EP_TYPE_INTERRUPT, IN_EPSIZE, 1);
-	succ &= Endpoint_ConfigureEndpoint(OUT_EPADDR, EP_TYPE_INTERRUPT, OUT_EPSIZE, 1);
+	Endpoint_ConfigureEndpoint(IN_EPADDR,  EP_TYPE_INTERRUPT, IN_EPSIZE,  1);
+	Endpoint_ConfigureEndpoint(OUT_EPADDR, EP_TYPE_INTERRUPT, OUT_EPSIZE, 1);
 }

@@ -8,8 +8,8 @@ import usb
 VENDOR  = 0x1d50
 PRODUCT = 0x6666
 
+# Find and configure device
 dev = None
-
 while dev is None:
 	dev = usb.core.find(idVendor=VENDOR, idProduct=PRODUCT)
 	time.sleep(0.1)
@@ -21,24 +21,15 @@ manufacturer = usb.util.get_string(dev, 100, dev.iManufacturer)
 product = usb.util.get_string(dev, 100, dev.iProduct)
 serial = usb.util.get_string(dev, 100, dev.iSerialNumber)
 
-print("Found {} {} with serial {} on bus {}:{}".format(manufacturer, product, serial, dev.bus, dev.address))
+print("Found {0} {1} with serial {2} on bus {3}:{4}".format(manufacturer, product, serial, dev.bus, dev.address))
 
 dev.set_configuration()
 
-# Send toggle command
-bmRequestType = usb.util.build_request_type(
-			usb.util.CTRL_OUT,
-			usb.util.CTRL_TYPE_CLASS,
-			usb.util.CTRL_RECIPIENT_INTERFACE)
-dev.ctrl_transfer(bmRequestType, 0x09, 0, 0, [0x00,0x00])
+# Send loopback text
+s = "loopback"
+print("Sending '{0}'".format(s))
+dev.write(0x02, s, 0, 100)
 
-time.sleep(0.1)
-
-# Read serial number
-bmRequestType = usb.util.build_request_type(usb.util.CTRL_IN,
-				usb.util.CTRL_TYPE_CLASS,
-				usb.util.CTRL_RECIPIENT_INTERFACE)
-serial = dev.ctrl_transfer(bmRequestType, 0x01, 0x301, 0, 4)
-
-print("Read control data: " + hex(struct.unpack(">I", serial)[0]))
-
+# Read back loopback text
+ret = dev.read(0x81, 8, 0, 0)
+print("Received '{0}'".format(''.join([chr(x) for x in ret])))

@@ -29,29 +29,21 @@
   this software.
 */
 
-/** \file
- *
- *  Header file for RelayBoard.c.
- */
+#ifndef _BLUEBOX_H_
+#define _BLUEBOX_H_
 
-#ifndef _RELAYBOARD_H_
-#define _RELAYBOARD_H_
+#include <avr/io.h>
+#include <avr/wdt.h>
+#include <avr/power.h>
+#include <avr/interrupt.h>
 
-	/* Includes: */
-		#include <avr/io.h>
-		#include <avr/wdt.h>
-		#include <avr/power.h>
-		#include <avr/interrupt.h>
+#include "Descriptors.h"
 
-		#include "Descriptors.h"
+#include <LUFA/Drivers/Board/LEDs.h>
+#include <LUFA/Drivers/USB/USB.h>
 
-		#include <LUFA/Drivers/Board/LEDs.h>
-		#include <LUFA/Drivers/USB/USB.h>
+void SetupHardware(void);
+void EVENT_USB_Device_ControlRequest(void);
 
-	/* Function Prototypes: */
-		void SetupHardware(void);
-
-		void EVENT_USB_Device_ControlRequest(void);
-
-#endif
+#endif /* _BLUEBOX_H_ */
 

@@ -41,17 +41,21 @@
 #include <avr/pgmspace.h>
 #include <LUFA/Drivers/USB/USB.h>
 
+#define IN_EPADDR	(ENDPOINT_DIR_IN | 1)
+#define OUT_EPADDR	(ENDPOINT_DIR_OUT | 2)
+#define IN_EPSIZE	8
+#define OUT_EPSIZE	8
+
 /* Type Defines: */
 /** Type define for the device configuration descriptor structure. This must be defined in the
  *  application code, as the configuration descriptor contains several sub-descriptors which
  *  vary between devices, and which describe the device's usage to the host.
  */
-typedef struct
-{
+typedef struct {
 	USB_Descriptor_Configuration_Header_t Config;
-
-	// BlueBox Interface
-	USB_Descriptor_Interface_t BlueBoxInterface;
+	USB_Descriptor_Interface_t Interface;
+	USB_Descriptor_Endpoint_t DataInEndpoint;
+	USB_Descriptor_Endpoint_t DataOutEndpoint;
 } USB_Descriptor_Configuration_t;
 
 /* Function Prototypes: */

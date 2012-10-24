@@ -11,9 +11,9 @@
 
 # Run "make help" for target help.
 
-MCU          = atmega32u2
+MCU          = atmega32u4
 ARCH         = AVR8
-BOARD        = MINIMUS
+BOARD        = TEENSY
 F_CPU        = 16000000
 F_USB        = $(F_CPU)
 OPTIMIZATION = s

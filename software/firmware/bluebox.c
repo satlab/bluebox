@@ -60,14 +60,15 @@ void BBTask(void)
 			Endpoint_Read_Stream_LE(&text, sizeof(text), NULL);
 		}
 		Endpoint_ClearOUT();
-		LEDs_TurnOffLEDs(LEDS_LED1);
+
+		/* Clear pending data in IN endpoint */
+		Endpoint_SelectEndpoint(IN_EPADDR);
+		Endpoint_AbortPendingIN();
 	}
 
-	Endpoint_SelectEndpoint(IN_EPADDR);
 	if (Endpoint_IsINReady()) {
 		Endpoint_Write_Stream_LE(&text, sizeof(text), NULL);
 		Endpoint_ClearIN();
-		LEDs_TurnOnLEDs(LEDS_LED1);
 	}
 }
 

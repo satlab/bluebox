@@ -21,8 +21,6 @@
 # THE SOFTWARE.
 
 import sys
-import time
-import usb
 import bluebox
 
 def main():

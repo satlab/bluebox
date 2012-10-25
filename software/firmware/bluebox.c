@@ -1,4 +1,31 @@
+/*
+ * Copyright (c) 2012 Jeppe Ledet-Pedersen <jlp@satlab.org>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#include <stdint.h>
+#include <stdbool.h>
+
 #include "bluebox.h"
+
+static uint8_t led_status = 0;
 
 void SetupHardware(void)
 {
@@ -13,43 +40,43 @@ void SetupHardware(void)
 
 void EVENT_USB_Device_ControlRequest(void)
 {
-	uint8_t SerialNumber[] = {0x11, 0x22, 0x33, 0x44};
-	uint8_t ControlData[2] = {0, 0};
-
 	switch (USB_ControlRequest.bRequest) {
-	case 0x09:
-		if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE)) {
+	case REQUEST_LEDCTL:
+		switch (USB_ControlRequest.bmRequestType) {
+		case (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE):
 			Endpoint_ClearSETUP();
 
-			Endpoint_Read_Control_Stream_LE(ControlData, sizeof(ControlData));
+			Endpoint_Read_Control_Stream_LE(&led_status, sizeof(led_status));
+
+			if (led_status)
+				LEDs_TurnOnLEDs(LEDS_LED1);
+			else
+				LEDs_TurnOffLEDs(LEDS_LED1);
+
 			Endpoint_ClearIN();
-		}
 
-		break;
-	case 0x01:
-		if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE)) {
+			break;
+		case (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE):
 			Endpoint_ClearSETUP();
 
-			switch (USB_ControlRequest.wValue) {
-				case 0x301:
-					Endpoint_Write_Control_Stream_LE(SerialNumber, sizeof(SerialNumber));
-					break;
-			}
-
-			if (ControlData[1])
-				Endpoint_Write_Control_Stream_LE(ControlData, sizeof(ControlData));
-
+			Endpoint_Write_Control_Stream_LE(&led_status, sizeof(led_status));
 			Endpoint_ClearOUT();
-		}
 
+			break;
+		default:
+			break;
+		}
+		break;
+	default:
 		break;
 	}
 }
 
-uint8_t text[IN_EPSIZE] = "testing";
 
-void BBTask(void)
+void bluebox_task(void)
 {
+	static uint8_t text[IN_EPSIZE] = "testing";
+
 	if (USB_DeviceState != DEVICE_STATE_Configured)
 		return;
 
@@ -80,7 +107,7 @@ int main(void)
 	LEDs_TurnOnLEDs(LEDS_LED1);
 
 	for (;;) {
-		BBTask();
+		bluebox_task();
 		USB_USBTask();
 	}
 }

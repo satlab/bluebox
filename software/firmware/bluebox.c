@@ -22,12 +22,18 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <errno.h>
 
 #include "bluebox.h"
 
 static uint8_t led_status = 0;
 
-void SetupHardware(void)
+ISR(TIMER1_COMPA_vect)
+{
+	LEDs_ToggleLEDs(LEDS_LED1;
+}
+
+void setup_hardware(void)
 {
 	MCUSR &= ~(1 << WDRF);
 	wdt_disable();
@@ -36,6 +42,29 @@ void SetupHardware(void)
 
 	LEDs_Init();
 	USB_Init();
+}
+
+int timer_init(unsigned int period_ms)
+{
+	uint32_t ocr1a;
+
+	if (period_ms > 1000)
+		return -ERANGE;
+
+	ocr1a = ((uint32_t) period_ms * (F_CPU/256UL)) / 1000UL;
+
+	/* Set CTC mode and /256 prescaler */
+	TCCR1A = 0;
+	TCCR1B = _BV(WGM12) | _BV(CS12);
+	TCCR1C = 0;
+	TCNT1 = 0;
+
+	/* Set overflow every second */
+	OCR1AH = ((ocr1a >> 8) & 0xff);
+	OCR1AL = ((ocr1a >> 0) & 0xff);
+
+	/* Enable output compare A interrupt */
+	TIMSK1 = _BV(OCIE1A);
 }
 
 void EVENT_USB_Device_ControlRequest(void)
@@ -48,10 +77,7 @@ void EVENT_USB_Device_ControlRequest(void)
 
 			Endpoint_Read_Control_Stream_LE(&led_status, sizeof(led_status));
 
-			if (led_status)
-				LEDs_TurnOnLEDs(LEDS_LED1);
-			else
-				LEDs_TurnOffLEDs(LEDS_LED1);
+			timer_init(led_status ? 100 : 1000);
 
 			Endpoint_ClearIN();
 
@@ -101,7 +127,8 @@ void bluebox_task(void)
 
 int main(void)
 {
-	SetupHardware();
+	setup_hardware();
+	timer_init(1000);
 	GlobalInterruptEnable();
 
 	LEDs_TurnOnLEDs(LEDS_LED1);

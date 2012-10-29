@@ -26,14 +26,18 @@ import bluebox
 def main():
 	bb = bluebox.Bluebox()
 
-	print("Found {0} {1} with serial {2} on bus {3}:{4}".format(bb.manufacturer, bb.product, bb.serial, bb.dev.bus, bb.dev.address))
+	print("Found {0} {1} with serial {2} on bus {3}:{4}".format(
+		bb.manufacturer, bb.product, bb.serial,
+		bb.dev.bus, bb.dev.address))
 
 	bb.led_toggle()
 
 	s = sys.argv[1] if len(sys.argv) > 1 else "loopback"
 	print("Send '{0}'".format(s))
+
 	bb.loopback_write(s)
 	ret = bb.loopback_read()
+
 	print("Recv '{0}'".format(''.join([chr(x) for x in ret])))
 
 if __name__ == "__main__":

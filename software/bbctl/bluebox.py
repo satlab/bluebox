@@ -25,8 +25,23 @@ class Bluebox(object):
 	VENDOR  = 0x1d50
 	PRODUCT = 0x6666
 
-	REQUEST_LEDCTL = 0x01
+	# LED Control
+	REQUEST_LEDCTL		= 0x01
 
+	# RF Control
+	REQUEST_FREQUENCY 	= 0x02
+	REQUEST_MODINDEX	= 0x03
+	REQUEST_CSMARSSI	= 0x04
+	REQUEST_POWER		= 0x05
+	REQUEST_AFC		= 0x06
+	REQUEST_IFBW		= 0x07
+	REQUEST_TRAINING	= 0x08
+	REQUEST_SYNCWORD	= 0x09
+
+	# Data Control
+	REQUEST_DATA		= 0x0A
+
+	# Data Endpoints
 	LOOPBACK_OUT = (usb.util.ENDPOINT_OUT | 2)
 	LOOPBACK_IN  = (usb.util.ENDPOINT_IN  | 1)
 	
@@ -42,26 +57,53 @@ class Bluebox(object):
 		self.dev.set_configuration()
 
 		self.manufacturer = usb.util.get_string(self.dev, 100, self.dev.iManufacturer)
-		self.product = usb.util.get_string(self.dev, 100, self.dev.iProduct)
-		self.serial = usb.util.get_string(self.dev, 100, self.dev.iSerialNumber)
+		self.product      = usb.util.get_string(self.dev, 100, self.dev.iProduct)
+		self.serial       = usb.util.get_string(self.dev, 100, self.dev.iSerialNumber)
 
-	def led_get(self):
+	def _ctrl_send(self, request, data):
+		bmRequestType = usb.util.build_request_type(
+					usb.util.CTRL_OUT,
+					usb.util.CTRL_TYPE_CLASS,
+					usb.util.CTRL_RECIPIENT_INTERFACE)
+		self.dev.ctrl_transfer(bmRequestType, request, 0, 0, data)
+
+	def _ctrl_read(self, request, length):
 		bmRequestType = usb.util.build_request_type(
 					usb.util.CTRL_IN,
 					usb.util.CTRL_TYPE_CLASS,
 					usb.util.CTRL_RECIPIENT_INTERFACE)
-		return self.dev.ctrl_transfer(bmRequestType, self.REQUEST_LEDCTL, 0, 0, 1)[0]
+		return self.dev.ctrl_transfer(bmRequestType, request, 0, 0, length)
+
+	def led_get(self):
+		return self._ctrl_read(self.REQUEST_LEDCTL, 1)[0]
 
 	def led_set(self, enable):
-		bmRequestType = usb.util.build_request_type(
-					usb.util.CTRL_OUT, 
-					usb.util.CTRL_TYPE_CLASS, 
-					usb.util.CTRL_RECIPIENT_INTERFACE)
-		self.dev.ctrl_transfer(bmRequestType, self.REQUEST_LEDCTL, 0, 0, [enable])
+		self._ctrl_send(self.REQUEST_LEDCTL, [enable])
 
 	def led_toggle(self):
 		status = self.led_get()
 		self.led_set(not status)
+
+	def rf_frequency(self, freq):
+		pass
+
+	def rf_modindex(self, mi):
+		pass
+
+	def rf_power(self, dbm):
+		pass
+
+	def rf_ifbw(self, ifbw):
+		pass
+
+	def rf_syncword(self, word, tol):
+		pass
+
+	def rf_training(self, startms, interms):
+		pass
+
+	def rf_config(self):
+		pass
 
 	def loopback_write(self, text):
 		self.dev.write(self.LOOPBACK_OUT, text, 0)

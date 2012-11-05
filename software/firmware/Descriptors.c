@@ -75,18 +75,18 @@ const USB_Descriptor_Configuration_t PROGMEM BlueBox_ConfigurationDescriptor =
 		.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 
 		.EndpointAddress        = IN_EPADDR,
-		.Attributes             = (EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
+		.Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
 		.EndpointSize           = IN_EPSIZE,
-		.PollingIntervalMS      = 0x00,
+		.PollingIntervalMS      = 0x05,
 	},
 
 	.DataOutEndpoint = {
 		.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 
 		.EndpointAddress        = OUT_EPADDR,
-		.Attributes             = (EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
+		.Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
 		.EndpointSize           = OUT_EPSIZE,
-		.PollingIntervalMS      = 0x00,
+		.PollingIntervalMS      = 0x05,
 	},
 };
 
@@ -159,6 +159,6 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 
 void EVENT_USB_Device_ConfigurationChanged(void)
 {
-	Endpoint_ConfigureEndpoint(IN_EPADDR,  EP_TYPE_BULK, IN_EPSIZE,  1);
-	Endpoint_ConfigureEndpoint(OUT_EPADDR, EP_TYPE_BULK, OUT_EPSIZE, 1);
+	Endpoint_ConfigureEndpoint(IN_EPADDR,  EP_TYPE_INTERRUPT, IN_EPSIZE,  1);
+	Endpoint_ConfigureEndpoint(OUT_EPADDR, EP_TYPE_INTERRUPT, OUT_EPSIZE, 1);
 }

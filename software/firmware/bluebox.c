@@ -30,7 +30,7 @@ static uint8_t led_status = 0;
 
 ISR(TIMER1_COMPA_vect)
 {
-	LEDs_ToggleLEDs(LEDS_LED1;
+	LEDs_ToggleLEDs(LEDS_LED1);
 }
 
 void setup_hardware(void)
@@ -97,7 +97,6 @@ void EVENT_USB_Device_ControlRequest(void)
 		break;
 	}
 }
-
 
 void bluebox_task(void)
 {

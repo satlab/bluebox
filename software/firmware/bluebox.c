@@ -65,6 +65,8 @@ int timer_init(unsigned int period_ms)
 
 	/* Enable output compare A interrupt */
 	TIMSK1 = _BV(OCIE1A);
+
+	return 0;
 }
 
 void EVENT_USB_Device_ControlRequest(void)

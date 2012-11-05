@@ -37,13 +37,16 @@ class Bluebox(object):
 	REQUEST_IFBW		= 0x07
 	REQUEST_TRAINING	= 0x08
 	REQUEST_SYNCWORD	= 0x09
+	REQUEST_TEST		= 0x0A
 
 	# Data Control
-	REQUEST_DATA		= 0x0A
+	REQUEST_DATA		= 0x10
 
 	# Data Endpoints
-	LOOPBACK_OUT = (usb.util.ENDPOINT_OUT | 2)
 	LOOPBACK_IN  = (usb.util.ENDPOINT_IN  | 1)
+	LOOPBACK_OUT = (usb.util.ENDPOINT_OUT | 2)
+	DATA_IN	     = (usb.util.ENDPOINT_IN  | 3)
+	DATA_OUT     = (usb.util.ENDPOINT_OUT | 4)
 	
 	def __init__(self):
 		self.dev = None

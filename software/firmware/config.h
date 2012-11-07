@@ -20,51 +20,29 @@
  * THE SOFTWARE.
  */
 
-#ifndef _BLUEBOX_H_
-#define _BLUEBOX_H_
+#ifndef _CONFIG_H_
+#define _CONFIG_H_
 
-#include <stdlib.h>
+#define XTAL_FREQ 		16000000
 
-#include <avr/io.h>
-#include <avr/wdt.h>
-#include <avr/power.h>
-#include <avr/interrupt.h>
-#include <util/delay.h>
+#define PA_SETTING		8
 
-#include "Descriptors.h"
+/* Default settings */
+#define FREQUENCY		437450000
+#define TX_WAIT_TIMEOUT		120U
+#define TX_TIMEOUT_DELAY	10U
+#define RX_WAIT_TIMEOUT		120U
+#define CSMA_TIMEOUT		60U
+#define CSMA_RSSI		-70
+#define BAUD_RATE		2400
+#define MOD_INDEX		8
+#define AFC_RANGE		10
+#define AFC_KI			11
+#define AFC_KP			4
+#define AFC_ENABLE		1
+#define IF_FILTER_BW		2
+#define SYNC_WORD_TOL		3
 
-#include <LUFA/Drivers/USB/USB.h>
+#define BITS_PER_BYTE		8
 
-#define REQUEST_LEDCTL		0x01
-#define REQUEST_REGISTER	0x0B
-
-struct bluebox_config {
-	uint32_t freq;
-	int16_t csma_rssi;
-	uint16_t speed;
-	uint8_t modindex;
-	uint8_t pa_setting;
-	uint8_t afc_range;
-	uint8_t afc_ki;
-	uint8_t afc_kp;
-	uint8_t afc_enable;
-	uint8_t if_bw;
-	uint8_t sync_word_tolerance;
-};
-
-void SetupHardware(void);
-void EVENT_USB_Device_ControlRequest(void);
-
-static inline void delay_ms(unsigned int ms)
-{
-	while (ms--)
-		_delay_ms(1);
-}
-
-static inline void reboot(void)
-{
-	wdt_enable(WDTO_15MS);
-	while (1);
-}
-
-#endif /* _BLUEBOX_H_ */
+#endif /* _CONFIG_H_ */

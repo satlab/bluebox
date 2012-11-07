@@ -25,12 +25,15 @@
 #include <errno.h>
 
 #include "bluebox.h"
+#include "adf7021.h"
 
 static uint8_t led_status = 0;
 
+struct bluebox_config conf;
+
 ISR(TIMER1_COMPA_vect)
 {
-	LEDs_ToggleLEDs(LEDS_LED1);
+	/* Toggle LEDs */
 }
 
 void setup_hardware(void)
@@ -40,7 +43,6 @@ void setup_hardware(void)
 
 	clock_prescale_set(clock_div_1);
 
-	LEDs_Init();
 	USB_Init();
 }
 
@@ -69,31 +71,60 @@ int timer_init(unsigned int period_ms)
 	return 0;
 }
 
+static inline void do_ledctl(int direction)
+{
+	if (direction == ENDPOINT_DIR_OUT) {
+		Endpoint_Read_Control_Stream_LE(&led_status, sizeof(led_status));
+		timer_init(led_status ? 100 : 1000);
+	} else if (direction == ENDPOINT_DIR_IN) {
+		Endpoint_Write_Control_Stream_LE(&led_status, sizeof(led_status));
+	}
+}
+
+static inline void do_rf_register(int direction)
+{
+	uint32_t value;
+	adf_reg_t reg;
+
+	if (direction == ENDPOINT_DIR_OUT) {
+		Endpoint_Read_Control_Stream_LE(&value, sizeof(value));
+		reg.whole_reg = value;
+		adf_write_reg(&reg);
+	} else if (direction == ENDPOINT_DIR_IN) {
+		reg = adf_read_reg(&reg);
+		value = reg.whole_reg;
+		Endpoint_Write_Control_Stream_LE(&value, sizeof(value));
+	}
+}
+
 void EVENT_USB_Device_ControlRequest(void)
 {
-	switch (USB_ControlRequest.bRequest) {
-	case REQUEST_LEDCTL:
-		switch (USB_ControlRequest.bmRequestType) {
-		case (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE):
-			Endpoint_ClearSETUP();
+	switch (USB_ControlRequest.bmRequestType) {
+	case (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE):
 
-			Endpoint_Read_Control_Stream_LE(&led_status, sizeof(led_status));
+		Endpoint_ClearSETUP();
 
-			timer_init(led_status ? 100 : 1000);
-
-			Endpoint_ClearIN();
-
-			break;
-		case (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE):
-			Endpoint_ClearSETUP();
-
-			Endpoint_Write_Control_Stream_LE(&led_status, sizeof(led_status));
-			Endpoint_ClearOUT();
-
-			break;
-		default:
+		switch (USB_ControlRequest.bRequest) {
+		case REQUEST_LEDCTL:
+			do_ledctl(ENDPOINT_DIR_OUT);
 			break;
 		}
+
+		Endpoint_ClearIN();
+
+		break;
+	case (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE):
+
+		Endpoint_ClearSETUP();
+
+		switch (USB_ControlRequest.bRequest) {
+		case REQUEST_LEDCTL:
+			do_ledctl(ENDPOINT_DIR_IN);
+			break;
+		}
+
+		Endpoint_ClearOUT();
+
 		break;
 	default:
 		break;
@@ -131,8 +162,6 @@ int main(void)
 	setup_hardware();
 	timer_init(1000);
 	GlobalInterruptEnable();
-
-	LEDs_TurnOnLEDs(LEDS_LED1);
 
 	for (;;) {
 		bluebox_task();

@@ -25,7 +25,6 @@
 
 #define XTAL_FREQ 		16000000
 
-#define PA_SETTING		8
 
 /* Default settings */
 #define FREQUENCY		437450000
@@ -36,6 +35,7 @@
 #define CSMA_RSSI		-70
 #define BAUD_RATE		2400
 #define MOD_INDEX		8
+#define PA_SETTING		8
 #define AFC_RANGE		10
 #define AFC_KI			11
 #define AFC_KP			4

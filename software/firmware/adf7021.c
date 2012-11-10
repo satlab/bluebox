@@ -57,30 +57,30 @@ void adf_write_reg(adf_reg_t *reg)
 	signed char i, j;
 	unsigned char byte;
 
-	ADF_PORT &= ~_BV(ADF_SLE);
-	ADF_PORT &= ~_BV(ADF_SCLK);
+	ADF_PORT_SLE &= ~_BV(ADF_SLE);
+	ADF_PORT_SCLK &= ~_BV(ADF_SCLK);
 
 	/* Clock data out MSbit first */
 	for (i=3; i>=0; i--) {
 		byte = reg->byte[i];
 
 		for (j=8; j>0; j--) {
-			ADF_PORT &= ~_BV(ADF_SCLK);
+			ADF_PORT_SCLK &= ~_BV(ADF_SCLK);
 			if (byte & 0x80)
-				ADF_PORT |= _BV(ADF_SDATA);
+				ADF_PORT_SDATA |= _BV(ADF_SDATA);
 			else 
-				ADF_PORT &= ~_BV(ADF_SDATA);
-			ADF_PORT |= _BV(ADF_SCLK);
+				ADF_PORT_SDATA &= ~_BV(ADF_SDATA);
+			ADF_PORT_SCLK |= _BV(ADF_SCLK);
 			byte += byte;
 		}
-		ADF_PORT &= ~_BV(ADF_SCLK);
+		ADF_PORT_SCLK &= ~_BV(ADF_SCLK);
 	}
 
 	/* Strobe the latch */
-	ADF_PORT |= _BV(ADF_SLE);
-	ADF_PORT |= _BV(ADF_SLE);
-	ADF_PORT &= ~_BV(ADF_SDATA);
-	ADF_PORT &= ~_BV(ADF_SLE);
+	ADF_PORT_SLE |= _BV(ADF_SLE);
+	ADF_PORT_SLE |= _BV(ADF_SLE);
+	ADF_PORT_SDATA &= ~_BV(ADF_SDATA);
+	ADF_PORT_SDATA &= ~_BV(ADF_SLE);
 }
 
 adf_reg_t adf_read_reg(unsigned int readback_config)
@@ -90,37 +90,37 @@ adf_reg_t adf_read_reg(unsigned int readback_config)
 
 	/* Write readback and ADC control value */
 	register_value.whole_reg = ((readback_config & 0x1F) << 4);
+
 	/* Address the readback setup register */
 	register_value.whole_reg |= 7; 
 	adf_write_reg(&register_value);
 	register_value.whole_reg = 0;
 
 	/* Read back value */
-	ADF_PORT &= ~_BV(ADF_SDATA);
-	ADF_PORT &= ~_BV(ADF_SCLK);
-	ADF_PORT |= _BV(ADF_SLE);
+	ADF_PORT_SDATA &= ~_BV(ADF_SDATA);
+	ADF_PORT_SCLK &= ~_BV(ADF_SCLK);
+	ADF_PORT_SLE |= _BV(ADF_SLE);
 
 	/* Clock in first bit and discard (DB16 is not used) */
-	ADF_PORT |= _BV(ADF_SCLK);
+	ADF_PORT_SCLK |= _BV(ADF_SCLK);
 	unsigned char byte = 0;
-	ADF_PORT &= ~_BV(ADF_SCLK);
+	ADF_PORT_SCLK &= ~_BV(ADF_SCLK);
 
 	/* Clock in data MSbit first */
 	for (i=1; i>=0; i--) {
 		for (j=8; j>0; j--) {
-			ADF_PORT |= _BV(ADF_SCLK);
+			ADF_PORT_SCLK |= _BV(ADF_SCLK);
 			byte += byte;
-			if (ADF_PORT_IN & (1 << 4)) {
+			if (ADF_PORT_IN_SREAD & _BV(ADF_SREAD))
 				byte |= 1;
-			}
-			ADF_PORT &= ~_BV(ADF_SCLK);
+			ADF_PORT_SCLK &= ~_BV(ADF_SCLK);
 		}
 		register_value.byte[i] = byte;
 	}
 
-	ADF_PORT |= _BV(ADF_SCLK);
-	ADF_PORT &= ~_BV(ADF_SLE);
-	ADF_PORT &= ~_BV(ADF_SCLK);
+	ADF_PORT_SCLK |= _BV(ADF_SCLK);
+	ADF_PORT_SLE &= ~_BV(ADF_SLE);
+	ADF_PORT_SCLK &= ~_BV(ADF_SCLK);
 
 	return register_value;
 }
@@ -131,9 +131,15 @@ void adf_set_power_on(unsigned long adf_xtal)
 	sys_conf.adf_xtal = adf_xtal;
 
 	/* Ensure the ADF GPIO port is correctly initialised */
-	ADF_PORT_DIR 	&= ~(_BV(ADF_SREAD) | _BV(ADF_SWD));	/* Input on SREAD and SWD output on the rest */
-	ADF_PORT_DIR 	|= _BV(ADF_SCLK) | _BV(ADF_SDATA) | _BV(ADF_SLE) | _BV(ADF_CE);
-	ADF_PORT 	|= _BV(ADF_CE);
+	ADF_PORT_DIR_SWD 	&= ~_BV(ADF_SWD);
+	ADF_PORT_DIR_SCLK 	|=  _BV(ADF_SCLK);
+	ADF_PORT_DIR_SREAD	&= ~_BV(ADF_SREAD);
+	ADF_PORT_DIR_SDATA	|=  _BV(ADF_SDATA);
+	ADF_PORT_DIR_SLE	|=  _BV(ADF_SLE);
+	ADF_PORT_DIR_MUXOUT	&= ~_BV(ADF_MUXOUT);
+	ADF_PORT_DIR_CE		|=  _BV(ADF_CE);
+	
+	ADF_PORT_CE 		|= _BV(ADF_CE);
 
 	/* write R1, Turn on Internal VCO */
 	sys_conf.r1.address_bits 	= 1;
@@ -171,7 +177,7 @@ void adf_set_power_on(unsigned long adf_xtal)
 void adf_set_power_off()
 {
 	/* Turn off chip enable */
-	ADF_PORT &= ~_BV(ADF_CE);
+	ADF_PORT_CE &= ~_BV(ADF_CE);
 
 	adf_state = ADF_OFF;
 	adf_pa_state = ADF_PA_OFF;

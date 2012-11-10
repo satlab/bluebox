@@ -26,6 +26,11 @@ LD_FLAGS     =
 # Default target
 all:
 
+program: all
+	dfu-programmer $(MCU) erase 
+	dfu-programmer $(MCU) flash $(TARGET).hex
+	dfu-programmer $(MCU) start
+
 # Include LUFA build script makefiles
 include $(LUFA_PATH)/Build/lufa_core.mk
 include $(LUFA_PATH)/Build/lufa_sources.mk

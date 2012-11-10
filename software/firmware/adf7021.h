@@ -27,9 +27,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define ADF_PORT 	PORTE
-#define ADF_PORT_IN 	PINE
-#define ADF_PORT_DIR 	DDRE
+//#define ADF_PORT 	PORTE
+//#define ADF_PORT_IN 	PINE
+//#define ADF_PORT_DIR 	DDRE
 
 #define ADF_PORT_SWD		PORTE
 #define ADF_PORT_IN_SWD		PINE
@@ -44,7 +44,7 @@
 #define ADF_PORT_SREAD		PORTC
 #define ADF_PORT_IN_SREAD	PINC
 #define ADF_PORT_DIR_SREAD	DDRC
-#define ADF_SREAD 		6	
+#define ADF_SREAD 		6
 
 #define ADF_PORT_SDATA		PORTB
 #define ADF_PORT_IN_SDATA	PINB
@@ -53,7 +53,7 @@
 
 #define ADF_PORT_SLE		PORTB
 #define ADF_PORT_IN_SLE		PINB
-#define ADF_PORT_DIR_SLEN	DDRB
+#define ADF_PORT_DIR_SLE	DDRB
 #define ADF_SLE 		5
 
 #define ADF_PORT_MUXOUT		PORTD

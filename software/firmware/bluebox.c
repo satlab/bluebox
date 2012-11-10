@@ -24,19 +24,31 @@
 #include <stdbool.h>
 #include <errno.h>
 
+#include "config.h"
 #include "bluebox.h"
 #include "adf7021.h"
 #include "bootloader.h"
 
 static uint8_t led_status = 0;
 
-struct bluebox_config conf;
+struct bluebox_config conf = {
+	.freq = FREQUENCY,
+	.csma_rssi = CSMA_RSSI,
+	.speed = BAUD_RATE,
+	.modindex = MOD_INDEX,
+	.pa_setting = PA_SETTING,
+	.afc_range = AFC_RANGE,
+	.afc_ki = AFC_KI,
+	.afc_kp = AFC_KP,
+	.afc_enable = AFC_ENABLE,
+	.if_bw = IF_FILTER_BW,
+	.sync_word_tolerance = SYNC_WORD_TOL,	
+};
 
-ISR(TIMER1_COMPA_vect)
+/*ISR(TIMER1_COMPA_vect)
 {
-	/* Toggle LEDs */
 	PORTF ^= _BV(0) | _BV(1) | _BV(4);
-}
+}*/
 
 void setup_hardware(void)
 {
@@ -47,6 +59,7 @@ void setup_hardware(void)
 
 	USB_Init();
 	DDRF |= _BV(0) | _BV(1) | _BV(4);
+	PORTF &= ~( _BV(0) | _BV(1) | _BV(4));
 }
 
 int timer_init(unsigned int period_ms)
@@ -78,26 +91,35 @@ static inline void do_ledctl(int direction)
 {
 	if (direction == ENDPOINT_DIR_OUT) {
 		Endpoint_Read_Control_Stream_LE(&led_status, sizeof(led_status));
-		timer_init(led_status ? 100 : 1000);
+		//timer_init(led_status ? 100 : 1000);
 	} else if (direction == ENDPOINT_DIR_IN) {
 		Endpoint_Write_Control_Stream_LE(&led_status, sizeof(led_status));
 	}
 }
 
-static inline void do_rf_register(int direction)
+static inline void do_rf_register(int direction, unsigned int regnum)
 {
 	uint32_t value;
 	adf_reg_t reg;
 
-	if (direction == ENDPOINT_DIR_OUT) {
+	if (direction == ENDPOINT_DIR_OUT) { /* Write register */
 		Endpoint_Read_Control_Stream_LE(&value, sizeof(value));
+		value = (value & ~0xf) | (regnum & 0xf);
 		reg.whole_reg = value;
 		adf_write_reg(&reg);
-	} else if (direction == ENDPOINT_DIR_IN) {
-		reg = adf_read_reg(&reg);
+	} else if (direction == ENDPOINT_DIR_IN) { /* Read register */
+		reg = adf_read_reg(regnum);
 		value = reg.whole_reg;
 		Endpoint_Write_Control_Stream_LE(&value, sizeof(value));
 	}
+}
+
+static inline void do_rxtx_mode(unsigned int tx)
+{
+	if (tx)
+		adf_set_tx_mode();
+	else
+		adf_set_rx_mode();
 }
 
 void EVENT_USB_Device_ControlRequest(void)
@@ -110,6 +132,12 @@ void EVENT_USB_Device_ControlRequest(void)
 		switch (USB_ControlRequest.bRequest) {
 		case REQUEST_LEDCTL:
 			do_ledctl(ENDPOINT_DIR_OUT);
+			break;
+		case REQUEST_REGISTER:
+			do_rf_register(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_RXTX_MODE:
+			do_rxtx_mode(USB_ControlRequest.wValue);
 			break;
 		case REQUEST_BOOTLOADER:
 			jump_to_bootloader();
@@ -126,6 +154,9 @@ void EVENT_USB_Device_ControlRequest(void)
 		switch (USB_ControlRequest.bRequest) {
 		case REQUEST_LEDCTL:
 			do_ledctl(ENDPOINT_DIR_IN);
+			break;
+		case REQUEST_REGISTER:
+			do_rf_register(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
 			break;
 		}
 
@@ -166,8 +197,15 @@ void bluebox_task(void)
 int main(void)
 {
 	setup_hardware();
-	timer_init(1000);
+	//timer_init(1000);
 	GlobalInterruptEnable();
+
+	adf_set_power_on(XTAL_FREQ);
+	adf_init_rx_mode(conf.speed, conf.modindex, conf.freq, conf.if_bw);
+	adf_init_tx_mode(conf.speed, conf.modindex, conf.freq);
+	adf_set_rx_sync_word(0x112233, ADF_SYNC_WORD_LEN_24, ADF_SYNC_WORD_ERROR_TOLERANCE_3);
+	adf_afc_on(conf.afc_range, conf.afc_ki, conf.afc_kp);
+	adf_set_rx_mode();
 
 	for (;;) {
 		bluebox_task();

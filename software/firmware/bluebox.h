@@ -37,6 +37,7 @@
 
 #define REQUEST_LEDCTL		0x01
 #define REQUEST_REGISTER	0x0B
+#define REQUEST_RXTX_MODE	0x0C
 #define REQUEST_BOOTLOADER 	0xFF	
 
 struct bluebox_config {

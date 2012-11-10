@@ -42,6 +42,7 @@ class Bluebox(object):
 	REQUEST_TRAINING	= 0x08
 	REQUEST_SYNCWORD	= 0x09
 	REQUEST_RXTX_MODE	= 0x0A
+	REQUEST_BITRATE		= 0x0B
 
 	# Data Control
 	REQUEST_DATA		= 0x10
@@ -73,6 +74,7 @@ class Bluebox(object):
 	READBACK_AFC		= 0x0016
 
 	# Testmode values
+	TESTMODE_OFF		= 0
 	TESTMODE_PATTERN_CARR	= 1
 	TESTMODE_PATTERN_HIGH	= 2
 	TESTMODE_PATTERN_LOW	= 3
@@ -126,12 +128,32 @@ class Bluebox(object):
 		value = struct.pack("<I", value | reg)
 		self._ctrl_write(self.REQUEST_REGISTER, value, wValue=reg)
 
-	def frequency(self, freq):
+	def set_frequency(self, freq):
 		freq = struct.pack("<I", freq)
 		self._ctrl_write(self.REQUEST_FREQUENCY, freq)
+	
+	def get_frequency(self):
+		freq = self._ctrl_read(self.REQUEST_FREQUENCY, 4)
+		freq = struct.unpack("<I", freq)[0]
+		return freq
 
-	def modindex(self, mi):
-		pass
+	def set_modindex(self, mod):
+		mod = struct.pack("<B", mod)
+		self._ctrl_write(self.REQUEST_MODINDEX, mod)
+	
+	def get_modindex(self):
+		mod = self._ctrl_read(self.REQUEST_MODINDEX, 1)
+		mod = struct.unpack("<B", mod)[0]
+		return mod
+
+	def set_bitrate(self, br):
+		br = struct.pack("<H", br)
+		self._ctrl_write(self.REQUEST_BITRATE, br)
+
+	def get_bitrate(self):
+		br = self._ctrl_read(self.REQUEST_BITRATE, 2)
+		br = struct.unpack("<H", br)[0]
+		return br
 
 	def power(self, dbm):
 		pass
@@ -175,4 +197,12 @@ class Bluebox(object):
 		self.dev.write(self.DATA_OUT, text, 0)
 
 	def data_read(self):
-		return self.dev.read(self.DATA_IN, 512, 0, timeout=-1)
+		ret = None
+		while ret is None:
+			try:
+				ret = self.dev.read(self.DATA_IN, 256, 0, timeout=1000)
+			except usb.core.USBError:
+				pass
+			except:
+				break
+		return ret

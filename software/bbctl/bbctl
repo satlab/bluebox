@@ -21,6 +21,7 @@
 # THE SOFTWARE.
 
 import sys
+import time
 import os.path
 import bluebox
 
@@ -52,18 +53,65 @@ def main():
 		rssi = bb.rssi()
 		print("{0} dBm".format(rssi))
 	elif cmd == "data":
+		last = 0
 		while True:
 			ret = bb.data_read()
-			print("Recv ({0}) '{1}'".format(len(ret), ''.join(["{0:02x}".format(x) for x in ret])))
+			if ret is None:
+				break
+			print("Recv ({0}) {1:.2f}s '{2}'".format(len(ret), time.time() - last, ''.join(["{0:02x}".format(x) for x in ret])))
+			last = time.time()
+
 	elif cmd == "testmode":
-		bb.testmode(bb.TESTMODE_PATTERN_1010)
-		bb.tx_mode()
+		if len(sys.argv) > 2:
+			if sys.argv[2] == "carrier":
+				bb.testmode(bb.TESTMODE_OFF)
+				bb.tx_mode()
+			elif sys.argv[2] == "high":
+				bb.testmode(bb.TESTMODE_PATTERN_HIGH)
+				bb.tx_mode()
+			elif sys.argv[2] == "low":
+				bb.testmode(bb.TESTMODE_PATTERN_LOW)
+				bb.tx_mode()
+			elif sys.argv[2] == "pn9":
+				bb.testmode(bb.TESTMODE_PATTERN_PN9)
+				bb.tx_mode()
+			elif sys.argv[2] == "1010":
+				bb.testmode(bb.TESTMODE_PATTERN_1010)
+				bb.tx_mode()
+			elif sys.argv[2] == "syncword":
+				bb.testmode(bb.TESTMODE_PATTERN_SWD)
+				bb.tx_mode()
+			elif sys.argv[2] == "off":
+				bb.testmode(bb.TESTMODE_OFF)
+				bb.rx_mode()
+		else:
+			bb.testmode(bb.TESTMODE_OFF)
+			bb.rx_mode()
+
 	elif cmd == "tx":
 		bb.tx_mode()
+
 	elif cmd == "rx":
 		bb.rx_mode()
+
 	elif cmd == "frequency":
-		bb.frequency(int(sys.argv[2]))
+		if len(sys.argv) > 2:
+			bb.set_frequency(int(sys.argv[2]))
+		else:
+			print(bb.get_frequency())
+
+	elif cmd == "bitrate":
+		if len(sys.argv) > 2:
+			bb.set_bitrate(int(sys.argv[2]))
+		else:
+			print(bb.get_bitrate())
+
+	elif cmd == "modindex":
+		if len(sys.argv) > 2:
+			bb.set_modindex(int(sys.argv[2]))
+		else:
+			print(bb.get_modindex())
+
 	else:
 		usage()
 

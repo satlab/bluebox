@@ -98,44 +98,49 @@ static inline void do_rxtx_mode(int direction, unsigned int wValue)
 		Endpoint_Write_Control_Stream_LE(&conf._name, sizeof(conf._name)); \
 	}
 
-static inline void do_frequency(int direction, unsigned int vWalue)
+static void do_frequency(int direction, unsigned int vWalue)
 {
 	rf_config_single(uint32_t, freq);
 }
 
-static inline void do_modindex(int direction, unsigned int vWalue)
+static void do_modindex(int direction, unsigned int vWalue)
 {
 	rf_config_single(uint8_t, modindex);
 }
 
-static inline void do_csma_rssi(int direction, unsigned int vWalue)
+static void do_csma_rssi(int direction, unsigned int vWalue)
 {
 	rf_config_single(int16_t, csma_rssi);
 }
 
-static inline void do_power(int direction, unsigned int vWalue)
+static void do_power(int direction, unsigned int vWalue)
 {
 	rf_config_single(uint8_t, pa_setting);
 }
 	
-static inline void do_acf(int direction, unsigned int vWalue)
+static void do_acf(int direction, unsigned int vWalue)
 {
 	rf_config_single(uint8_t, afc_enable);
 }
 
-static inline void do_ifbw(int direction, unsigned int vWalue)
+static void do_ifbw(int direction, unsigned int vWalue)
 {
 	rf_config_single(uint8_t, if_bw);
 }
 
-static inline void do_training(int direction, unsigned int vWalue)
+static void do_training(int direction, unsigned int vWalue)
 {
 	/* FIXME: add training bytes config */
 }
 
-static inline void do_syncword(int direction, unsigned int vWalue)
+static void do_syncword(int direction, unsigned int vWalue)
 {
 	/* FIXME: add sync word config */
+}
+
+static void do_bitrate(int direction, unsigned int vWalue)
+{
+	rf_config_single(uint16_t, speed);
 }
 
 void EVENT_USB_Device_ControlRequest(void)
@@ -176,6 +181,9 @@ void EVENT_USB_Device_ControlRequest(void)
 		case REQUEST_SYNCWORD:	
 			do_syncword(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
 			break;
+		case REQUEST_BITRATE:
+			do_bitrate(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			break;
 		case REQUEST_BOOTLOADER:
 			jump_to_bootloader();
 			break;
@@ -189,8 +197,35 @@ void EVENT_USB_Device_ControlRequest(void)
 		Endpoint_ClearSETUP();
 
 		switch (USB_ControlRequest.bRequest) {
-		case REQUEST_REGISTER:
-			do_register(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+		case REQUEST_RXTX_MODE:
+			do_rxtx_mode(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_FREQUENCY:
+			do_frequency(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_MODINDEX:
+			do_modindex(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_CSMA_RSSI:
+			do_csma_rssi(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_POWER:
+			do_power(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_AFC:
+			do_acf(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_IFBW:
+			do_ifbw(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_TRAINING:	
+			do_training(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_SYNCWORD:	
+			do_syncword(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_BITRATE:
+			do_bitrate(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
 			break;
 		}
 

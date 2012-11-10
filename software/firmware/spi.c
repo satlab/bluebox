@@ -29,10 +29,11 @@
 #include "bluebox.h"
 #include "spi.h"
 
-#define DATA_LENGTH	255
+#define DATA_LENGTH	150
+#define NUM_BUFS	2
 
-uint8_t data[DATA_LENGTH];
-uint8_t d;
+uint8_t data[NUM_BUFS][DATA_LENGTH];
+uint8_t d, curbuf;
 
 void spi_rx_start(void)
 {
@@ -51,20 +52,24 @@ void data_done(void)
 {
 	Endpoint_SelectEndpoint(IN_EPADDR);
 	Endpoint_AbortPendingIN();
-	Endpoint_Write_Stream_LE(&data, d, NULL);
+	Endpoint_Write_Stream_LE(&data[curbuf], d, NULL);
 	Endpoint_ClearIN();
+	curbuf = !curbuf;
+	PORTF |= _BV(4) | _BV(1);
+	swd_enable();
 }
 
 /* Syncword detect interrupt */
 ISR(INT6_vect)
 {
-	PORTF ^= _BV(4) | _BV(1);
+	PORTF &= ~(_BV(4) | _BV(1));
+	swd_disable();
 	spi_rx_start();
 }
 
 ISR(SPI_STC_vect)
 {
-	data[d++] = spi_read_data();
+	data[curbuf][d++] = spi_read_data();
 	if (d >= DATA_LENGTH) {
 		spi_rx_done();
 		data_done();

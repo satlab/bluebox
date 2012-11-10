@@ -77,7 +77,7 @@ const USB_Descriptor_Configuration_t PROGMEM BlueBox_ConfigurationDescriptor =
 		.EndpointAddress        = IN_EPADDR,
 		.Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
 		.EndpointSize           = IN_EPSIZE,
-		.PollingIntervalMS      = 0x05,
+		.PollingIntervalMS      = 0x01,
 	},
 
 	.DataOutEndpoint = {
@@ -86,7 +86,7 @@ const USB_Descriptor_Configuration_t PROGMEM BlueBox_ConfigurationDescriptor =
 		.EndpointAddress        = OUT_EPADDR,
 		.Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
 		.EndpointSize           = OUT_EPSIZE,
-		.PollingIntervalMS      = 0x05,
+		.PollingIntervalMS      = 0x01,
 	},
 };
 

@@ -499,6 +499,7 @@ void adf_configure(void)
 	adf_init_rx_mode(conf.speed, conf.modindex, conf.freq, conf.if_bw);
 	adf_init_tx_mode(conf.speed, conf.modindex, conf.freq);
 	adf_afc_on(conf.afc_range, conf.afc_ki, conf.afc_kp);
+	adf_set_rx_mode();
 }
 
 void adf_reset(void)
@@ -508,6 +509,5 @@ void adf_reset(void)
 	delay_ms(100);
 	adf_set_power_on(XTAL_FREQ);
 	adf_configure();
-	adf_set_rx_mode();
 }
 

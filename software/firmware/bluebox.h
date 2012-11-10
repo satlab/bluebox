@@ -46,6 +46,7 @@
 #define	REQUEST_TRAINING	0x08
 #define	REQUEST_SYNCWORD	0x09
 #define	REQUEST_RXTX_MODE	0x0A
+#define REQUEST_BITRATE		0x0B
 #define REQUEST_BOOTLOADER 	0xFF
 
 /* Board xtal frequency */
@@ -58,8 +59,8 @@
 #define RX_WAIT_TIMEOUT		120U
 #define CSMA_TIMEOUT		60U
 #define CSMA_RSSI		-70
-#define BAUD_RATE		2400
-#define MOD_INDEX		8
+#define BAUD_RATE		9600
+#define MOD_INDEX		2
 #define PA_SETTING		8
 #define AFC_RANGE		10
 #define AFC_KI			11
@@ -67,7 +68,7 @@
 #define AFC_ENABLE		1
 #define IF_FILTER_BW		2
 #define SYNC_WORD		0x4f5a33
-#define SYNC_WORD_TOLERANCE	ADF_SYNC_WORD_ERROR_TOLERANCE_3
+#define SYNC_WORD_TOLERANCE	ADF_SYNC_WORD_ERROR_TOLERANCE_1
 #define SYNC_WORD_LENGTH	ADF_SYNC_WORD_LEN_24
 
 struct bluebox_config {

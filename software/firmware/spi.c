@@ -20,9 +20,54 @@
  * THE SOFTWARE.
  */
 
-#ifndef _CONFIG_H_
-#define _CONFIG_H_
+#include <stdlib.h>
+#include <string.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
 
+#include "adf7021.h"
+#include "bluebox.h"
+#include "spi.h"
 
+#define DATA_LENGTH	255
 
-#endif /* _CONFIG_H_ */
+uint8_t data[DATA_LENGTH];
+uint8_t d;
+
+void spi_rx_start(void)
+{
+	d = 0;
+	spi_enable();
+	spi_enable_it();
+}
+
+void spi_rx_done(void)
+{
+	spi_disable_it();
+	spi_disable();
+}
+
+void data_done(void)
+{
+	Endpoint_SelectEndpoint(IN_EPADDR);
+	Endpoint_AbortPendingIN();
+	Endpoint_Write_Stream_LE(&data, d, NULL);
+	Endpoint_ClearIN();
+}
+
+/* Syncword detect interrupt */
+ISR(INT6_vect)
+{
+	PORTF ^= _BV(4) | _BV(1);
+	spi_rx_start();
+}
+
+ISR(SPI_STC_vect)
+{
+	data[d++] = spi_read_data();
+	if (d >= DATA_LENGTH) {
+		spi_rx_done();
+		data_done();
+		adf_set_threshold_free();
+	}
+}

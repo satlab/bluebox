@@ -204,6 +204,18 @@ typedef struct {
 		} r12;
 	};
 	union {
+		adf_reg_t r14_reg;
+		struct {
+			unsigned char address_bits : 4;
+			unsigned char test_tdac_en : 1;
+			unsigned int test_dac_offset : 16;
+			unsigned char test_dac_gain : 4;
+			unsigned char pulse_ext : 2;
+			unsigned char leak_factor : 3;
+			unsigned char ed_peak_resp : 2;
+		} r14;
+	};
+	union {
 		adf_reg_t r15_reg;
 		struct {
 			unsigned char address_bits : 4;
@@ -264,6 +276,7 @@ signed int adf_readback_rssi(void);
 signed int adf_readback_afc(void);
 signed int adf_readback_temp(void);
 float adf_readback_voltage(void);
+void adf_configure(void);
 void adf_reset(void);
 
 #endif /* _ADF7021_H_ */

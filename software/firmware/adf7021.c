@@ -170,6 +170,16 @@ void adf_set_power_on(unsigned long adf_xtal)
 	sys_conf.r15.cal_override 	= 0;
 	adf_write_reg(&sys_conf.r15_reg);
 
+	/* write R14, enable test DAC */
+	sys_conf.r14.address_bits	= 14;
+	sys_conf.r14.test_tdac_en 	= 0;
+	sys_conf.r14.test_dac_offset 	= 0;
+	sys_conf.r14.test_dac_gain 	= 0;
+	sys_conf.r14.pulse_ext 		= 0;
+	sys_conf.r14.leak_factor 	= 0;
+	sys_conf.r14.ed_peak_resp 	= 0;
+	adf_write_reg(&sys_conf.r14_reg);
+
 	adf_state = ADF_ON;
 	adf_pa_state = ADF_PA_OFF;
 }
@@ -260,8 +270,7 @@ void adf_init_rx_mode(unsigned int data_rate, uint8_t mod_index, unsigned long f
 {
 	/* Calculate the RX clocks */
 	rx_conf.desired.data_rate = data_rate;
-	/* Troels insists on running MSK, so we just use 0 as 0.5 ... */
-	rx_conf.desired.mod_index = mod_index ? mod_index : 0.5;
+	rx_conf.desired.mod_index = mod_index;
 	rx_conf.desired.freq = freq;
 	adf_find_clocks(&rx_conf);
 
@@ -298,8 +307,7 @@ void adf_init_tx_mode(unsigned int data_rate, uint8_t mod_index, unsigned long f
 {
 	/* Calculate the RX clocks */
 	tx_conf.desired.data_rate = data_rate;
-	/* Troels insists on running MSK, so we just use 0 as 0.5 ... */
-	tx_conf.desired.mod_index = mod_index ? mod_index : 0.5;
+	tx_conf.desired.mod_index = mod_index;
 	tx_conf.desired.freq = freq;
 	adf_find_clocks(&tx_conf);
 
@@ -485,16 +493,21 @@ void adf_test_off(void)
 	adf_state = ADF_RX;
 }
 
+void adf_configure(void)
+{
+	adf_set_rx_sync_word(conf.sw, conf.swlen, conf.swtol);
+	adf_init_rx_mode(conf.speed, conf.modindex, conf.freq, conf.if_bw);
+	adf_init_tx_mode(conf.speed, conf.modindex, conf.freq);
+	adf_afc_on(conf.afc_range, conf.afc_ki, conf.afc_kp);
+}
+
 void adf_reset(void)
 {
 	adf_test_off();
 	adf_set_power_off();
 	delay_ms(100);
 	adf_set_power_on(XTAL_FREQ);
-	adf_set_rx_sync_word(adf_current_syncword, ADF_SYNC_WORD_LEN_24, ADF_SYNC_WORD_ERROR_TOLERANCE_3);
-	adf_init_rx_mode(conf.speed, conf.modindex, conf.freq, conf.if_bw);
-	adf_init_tx_mode(conf.speed, conf.modindex, conf.freq);
-	adf_afc_on(conf.afc_range, conf.afc_ki, conf.afc_kp);
+	adf_configure();
 	adf_set_rx_mode();
 }
 

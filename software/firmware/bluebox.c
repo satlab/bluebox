@@ -28,8 +28,7 @@
 #include "bluebox.h"
 #include "adf7021.h"
 #include "bootloader.h"
-
-static uint8_t led_status = 0;
+#include "spi.h"
 
 struct bluebox_config conf = {
 	.freq = FREQUENCY,
@@ -42,13 +41,10 @@ struct bluebox_config conf = {
 	.afc_kp = AFC_KP,
 	.afc_enable = AFC_ENABLE,
 	.if_bw = IF_FILTER_BW,
-	.sync_word_tolerance = SYNC_WORD_TOL,	
+	.sw = SYNC_WORD,
+	.swtol = SYNC_WORD_TOLERANCE,	
+	.swlen = SYNC_WORD_LENGTH,
 };
-
-/*ISR(TIMER1_COMPA_vect)
-{
-	PORTF ^= _BV(0) | _BV(1) | _BV(4);
-}*/
 
 void setup_hardware(void)
 {
@@ -60,66 +56,86 @@ void setup_hardware(void)
 	USB_Init();
 	DDRF |= _BV(0) | _BV(1) | _BV(4);
 	PORTF &= ~( _BV(0) | _BV(1) | _BV(4));
+
+	DDRD &= ~_BV(4);
+
+	/* Initialize SPI */
+	spi_init_config(SPI_SLAVE | SPI_MSB_FIRST);
 }
 
-int timer_init(unsigned int period_ms)
-{
-	uint32_t ocr1a;
-
-	if (period_ms > 1000)
-		return -ERANGE;
-
-	ocr1a = ((uint32_t) period_ms * (F_CPU/256UL)) / 1000UL;
-
-	/* Set CTC mode and /256 prescaler */
-	TCCR1A = 0;
-	TCCR1B = _BV(WGM12) | _BV(CS12);
-	TCCR1C = 0;
-	TCNT1 = 0;
-
-	/* Set overflow every second */
-	OCR1AH = ((ocr1a >> 8) & 0xff);
-	OCR1AL = ((ocr1a >> 0) & 0xff);
-
-	/* Enable output compare A interrupt */
-	TIMSK1 = _BV(OCIE1A);
-
-	return 0;
-}
-
-static inline void do_ledctl(int direction)
-{
-	if (direction == ENDPOINT_DIR_OUT) {
-		Endpoint_Read_Control_Stream_LE(&led_status, sizeof(led_status));
-		//timer_init(led_status ? 100 : 1000);
-	} else if (direction == ENDPOINT_DIR_IN) {
-		Endpoint_Write_Control_Stream_LE(&led_status, sizeof(led_status));
-	}
-}
-
-static inline void do_rf_register(int direction, unsigned int regnum)
+static inline void do_register(int direction, unsigned int regnum)
 {
 	uint32_t value;
 	adf_reg_t reg;
 
-	if (direction == ENDPOINT_DIR_OUT) { /* Write register */
+	if (direction == ENDPOINT_DIR_OUT) {
 		Endpoint_Read_Control_Stream_LE(&value, sizeof(value));
 		value = (value & ~0xf) | (regnum & 0xf);
 		reg.whole_reg = value;
 		adf_write_reg(&reg);
-	} else if (direction == ENDPOINT_DIR_IN) { /* Read register */
+	} else if (direction == ENDPOINT_DIR_IN) {
 		reg = adf_read_reg(regnum);
 		value = reg.whole_reg;
 		Endpoint_Write_Control_Stream_LE(&value, sizeof(value));
 	}
 }
 
-static inline void do_rxtx_mode(unsigned int tx)
+static inline void do_rxtx_mode(int direction, unsigned int wValue)
 {
-	if (tx)
+	if (wValue != 0)
 		adf_set_tx_mode();
 	else
 		adf_set_rx_mode();
+}
+
+#define rf_config_single(_type, _name) 						\
+	_type _name; 								\
+	if (direction == ENDPOINT_DIR_OUT) {					\
+		Endpoint_Read_Control_Stream_LE(&_name, sizeof(_name));		\
+		conf._name = _name;						\
+		adf_configure();						\
+	} else if (direction == ENDPOINT_DIR_IN) {				\
+		Endpoint_Write_Control_Stream_LE(&conf._name, sizeof(conf._name)); \
+	}
+
+static inline void do_frequency(int direction, unsigned int vWalue)
+{
+	rf_config_single(uint32_t, freq);
+}
+
+static inline void do_modindex(int direction, unsigned int vWalue)
+{
+	rf_config_single(uint8_t, modindex);
+}
+
+static inline void do_csma_rssi(int direction, unsigned int vWalue)
+{
+	rf_config_single(int16_t, csma_rssi);
+}
+
+static inline void do_power(int direction, unsigned int vWalue)
+{
+	rf_config_single(uint8_t, pa_setting);
+}
+	
+static inline void do_acf(int direction, unsigned int vWalue)
+{
+	rf_config_single(uint8_t, afc_enable);
+}
+
+static inline void do_ifbw(int direction, unsigned int vWalue)
+{
+	rf_config_single(uint8_t, if_bw);
+}
+
+static inline void do_training(int direction, unsigned int vWalue)
+{
+	/* FIXME: add training bytes config */
+}
+
+static inline void do_syncword(int direction, unsigned int vWalue)
+{
+	/* FIXME: add sync word config */
 }
 
 void EVENT_USB_Device_ControlRequest(void)
@@ -130,14 +146,35 @@ void EVENT_USB_Device_ControlRequest(void)
 		Endpoint_ClearSETUP();
 
 		switch (USB_ControlRequest.bRequest) {
-		case REQUEST_LEDCTL:
-			do_ledctl(ENDPOINT_DIR_OUT);
-			break;
 		case REQUEST_REGISTER:
-			do_rf_register(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			do_register(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
 			break;
 		case REQUEST_RXTX_MODE:
-			do_rxtx_mode(USB_ControlRequest.wValue);
+			do_rxtx_mode(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_FREQUENCY:
+			do_frequency(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_MODINDEX:
+			do_modindex(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_CSMA_RSSI:
+			do_csma_rssi(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_POWER:
+			do_power(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_AFC:
+			do_acf(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_IFBW:
+			do_ifbw(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_TRAINING:	
+			do_training(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
+			break;
+		case REQUEST_SYNCWORD:	
+			do_syncword(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
 			break;
 		case REQUEST_BOOTLOADER:
 			jump_to_bootloader();
@@ -152,11 +189,8 @@ void EVENT_USB_Device_ControlRequest(void)
 		Endpoint_ClearSETUP();
 
 		switch (USB_ControlRequest.bRequest) {
-		case REQUEST_LEDCTL:
-			do_ledctl(ENDPOINT_DIR_IN);
-			break;
 		case REQUEST_REGISTER:
-			do_rf_register(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			do_register(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
 			break;
 		}
 
@@ -188,24 +222,23 @@ void bluebox_task(void)
 		Endpoint_AbortPendingIN();
 	}
 
-	if (Endpoint_IsINReady()) {
+	/*if (Endpoint_IsINReady()) {
 		Endpoint_Write_Stream_LE(&text, sizeof(text), NULL);
 		Endpoint_ClearIN();
-	}
+	}*/
 }
 
 int main(void)
 {
 	setup_hardware();
-	//timer_init(1000);
 	GlobalInterruptEnable();
 
 	adf_set_power_on(XTAL_FREQ);
-	adf_init_rx_mode(conf.speed, conf.modindex, conf.freq, conf.if_bw);
-	adf_init_tx_mode(conf.speed, conf.modindex, conf.freq);
-	adf_set_rx_sync_word(0x112233, ADF_SYNC_WORD_LEN_24, ADF_SYNC_WORD_ERROR_TOLERANCE_3);
-	adf_afc_on(conf.afc_range, conf.afc_ki, conf.afc_kp);
+	adf_configure();
 	adf_set_rx_mode();
+
+	swd_init();
+	swd_enable();
 
 	for (;;) {
 		bluebox_task();

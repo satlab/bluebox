@@ -26,6 +26,7 @@
 
 #include "bluebox.h"
 #include "adf7021.h"
+#include "bootloader.h"
 
 static uint8_t led_status = 0;
 
@@ -34,6 +35,7 @@ struct bluebox_config conf;
 ISR(TIMER1_COMPA_vect)
 {
 	/* Toggle LEDs */
+	PORTF ^= _BV(0) | _BV(1) | _BV(4);
 }
 
 void setup_hardware(void)
@@ -44,6 +46,7 @@ void setup_hardware(void)
 	clock_prescale_set(clock_div_1);
 
 	USB_Init();
+	DDRF |= _BV(0) | _BV(1) | _BV(4);
 }
 
 int timer_init(unsigned int period_ms)
@@ -107,6 +110,9 @@ void EVENT_USB_Device_ControlRequest(void)
 		switch (USB_ControlRequest.bRequest) {
 		case REQUEST_LEDCTL:
 			do_ledctl(ENDPOINT_DIR_OUT);
+			break;
+		case REQUEST_BOOTLOADER:
+			jump_to_bootloader();
 			break;
 		}
 

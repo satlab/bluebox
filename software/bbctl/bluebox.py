@@ -38,9 +38,13 @@ class Bluebox(object):
 	REQUEST_TRAINING	= 0x08
 	REQUEST_SYNCWORD	= 0x09
 	REQUEST_TEST		= 0x0A
+	REQUEST_REGISTER	= 0x0B
 
 	# Data Control
 	REQUEST_DATA		= 0x10
+
+	# Bootloader Control
+	REQUEST_BOOTLOADER	= 0xFF
 
 	# Data Endpoints
 	LOOPBACK_IN  = (usb.util.ENDPOINT_IN  | 1)
@@ -63,19 +67,19 @@ class Bluebox(object):
 		self.product      = usb.util.get_string(self.dev, 100, self.dev.iProduct)
 		self.serial       = usb.util.get_string(self.dev, 100, self.dev.iSerialNumber)
 
-	def _ctrl_send(self, request, data):
+	def _ctrl_send(self, request, data, timeout=1000):
 		bmRequestType = usb.util.build_request_type(
 					usb.util.CTRL_OUT,
 					usb.util.CTRL_TYPE_CLASS,
 					usb.util.CTRL_RECIPIENT_INTERFACE)
-		self.dev.ctrl_transfer(bmRequestType, request, 0, 0, data)
+		self.dev.ctrl_transfer(bmRequestType, request, 0, 0, data, timeout)
 
-	def _ctrl_read(self, request, length):
+	def _ctrl_read(self, request, length, timeout=1000):
 		bmRequestType = usb.util.build_request_type(
 					usb.util.CTRL_IN,
 					usb.util.CTRL_TYPE_CLASS,
 					usb.util.CTRL_RECIPIENT_INTERFACE)
-		return self.dev.ctrl_transfer(bmRequestType, request, 0, 0, length)
+		return self.dev.ctrl_transfer(bmRequestType, request, 0, 0, length, timeout)
 
 	def led_get(self):
 		return self._ctrl_read(self.REQUEST_LEDCTL, 1)[0]
@@ -107,6 +111,18 @@ class Bluebox(object):
 
 	def rf_config(self):
 		pass
+
+	def rf_reg_read(self, reg, value):
+		pass
+
+	def rf_reg_write(self, reg):
+		pass
+
+	def bootloader(self):
+		try:
+			self._ctrl_send(self.REQUEST_BOOTLOADER, None, 0)
+		except:
+			pass
 
 	def loopback_write(self, text):
 		self.dev.write(self.LOOPBACK_OUT, text, 0)

@@ -30,6 +30,10 @@ def main():
 		bb.manufacturer, bb.product, bb.serial,
 		bb.dev.bus, bb.dev.address))
 
+	if len(sys.argv) == 2 and sys.argv[1] == "bootloader":
+		bb.bootloader()
+		sys.exit(0)
+
 	bb.led_toggle()
 
 	s = sys.argv[1] if len(sys.argv) > 1 else "loopback"

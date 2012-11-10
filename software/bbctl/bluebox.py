@@ -176,7 +176,7 @@ class Bluebox(object):
 		rssi = rb & 0x7f
 		gc = (rb & 0x780) >> 7
 		dbm = ((rssi + gain_correction[gc]) * 0.5) - 130;
-		return round(dbm)
+		return int(round(dbm))
 
 	def testmode(self, mode):
 		self.reg_write(self.REGISTER_TESTMODE, mode << 8)

@@ -46,19 +46,22 @@ def main():
 	
 	if cmd == "bootloader":
 		bb.bootloader()
+
 	elif cmd == "version":
 		ver = bb.version()
 		print(hex(ver))
+
 	elif cmd == "rssi":
 		rssi = bb.rssi()
 		print("{0} dBm".format(rssi))
+
 	elif cmd == "data":
 		last = 0
 		while True:
-			ret = bb.data_read()
-			if ret is None:
+			data = bb.data_read()
+			if data is None:
 				break
-			print("Recv ({0}) {1:.2f}s '{2}'".format(len(ret), time.time() - last, ''.join(["{0:02x}".format(x) for x in ret])))
+			print("Recv ({0}) {1:.2f}s '{2}'".format(len(data), time.time() - last, ''.join(["{0:02x}".format(x) for x in data])))
 			last = time.time()
 
 	elif cmd == "testmode":

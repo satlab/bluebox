@@ -28,15 +28,11 @@ class Bluebox(object):
 	PRODUCT 		= 0x6666
 
 	# Data Endpoints
-	LOOPBACK_IN  = (usb.util.ENDPOINT_IN  | 1)
-	LOOPBACK_OUT = (usb.util.ENDPOINT_OUT | 2)
-	DATA_IN	     = (usb.util.ENDPOINT_IN  | 3)
-	DATA_OUT     = (usb.util.ENDPOINT_OUT | 4)
-
-	# LED Control
-	REQUEST_LEDCTL		= 0x01
+	DATA_IN	     = (usb.util.ENDPOINT_IN  | 1)
+	DATA_OUT     = (usb.util.ENDPOINT_OUT | 2)
 
 	# RF Control
+	REQUEST_REGISTER	= 0x01
 	REQUEST_FREQUENCY 	= 0x02
 	REQUEST_MODINDEX	= 0x03
 	REQUEST_CSMA_RSSI	= 0x04
@@ -45,9 +41,7 @@ class Bluebox(object):
 	REQUEST_IFBW		= 0x07
 	REQUEST_TRAINING	= 0x08
 	REQUEST_SYNCWORD	= 0x09
-	REQUEST_TEST		= 0x0A
-	REQUEST_REGISTER	= 0x0B
-	REQUEST_RXTX_MODE	= 0x0C
+	REQUEST_RXTX_MODE	= 0x0A
 
 	# Data Control
 	REQUEST_DATA		= 0x10
@@ -125,16 +119,6 @@ class Bluebox(object):
 					usb.util.CTRL_RECIPIENT_INTERFACE)
 		return self.dev.ctrl_transfer(bmRequestType, request, wValue, wIndex, length, timeout)
 
-	def led_get(self):
-		return self._ctrl_read(self.REQUEST_LEDCTL, 1)[0]
-
-	def led_set(self, enable):
-		self._ctrl_write(self.REQUEST_LEDCTL, [enable])
-
-	def led_toggle(self):
-		status = self.led_get()
-		self.led_set(not status)
-
 	def reg_read(self, reg):
 		return struct.unpack("<I", self._ctrl_read(self.REQUEST_REGISTER, 4, wValue=reg))[0] & 0xffff
 
@@ -143,7 +127,8 @@ class Bluebox(object):
 		self._ctrl_write(self.REQUEST_REGISTER, value, wValue=reg)
 
 	def frequency(self, freq):
-		pass
+		freq = struct.pack("<I", freq)
+		self._ctrl_write(self.REQUEST_FREQUENCY, freq)
 
 	def modindex(self, mi):
 		pass
@@ -186,8 +171,8 @@ class Bluebox(object):
 		except:
 			pass
 
-	def loopback_write(self, text):
-		self.dev.write(self.LOOPBACK_OUT, text, 0)
+	def data_write(self, text):
+		self.dev.write(self.DATA_OUT, text, 0)
 
-	def loopback_read(self):
-		return self.dev.read(self.LOOPBACK_IN, 64, 0)
+	def data_read(self):
+		return self.dev.read(self.DATA_IN, 512, 0, timeout=-1)

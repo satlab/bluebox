@@ -21,10 +21,11 @@
 # THE SOFTWARE.
 
 import sys
+import os.path
 import bluebox
 
 def usage():
-	print("usage: {0} command [arguments]".format(sys.argv[0]))
+	print("usage: {0} command [arguments]".format(os.path.basename(sys.argv[0])))
 	sys.exit(0)
 
 def main():
@@ -41,39 +42,30 @@ def main():
 		print("Found {0} {1} with serial {2} on bus {3}:{4}".format(
 			bb.manufacturer, bb.product, bb.serial,
 			bb.dev.bus, bb.dev.address))
-
+	
 	if cmd == "bootloader":
 		bb.bootloader()
-
-	if cmd == "version":
+	elif cmd == "version":
 		ver = bb.version()
 		print(hex(ver))
-
-	if cmd == "rssi":
+	elif cmd == "rssi":
 		rssi = bb.rssi()
-		print(rssi)
-
-	if cmd == "led":
-		bb.led_toggle()
-
-	if cmd == "loopback":
-		s = sys.argv[2] if len(sys.argv) > 2 else "loopback"
-		print("Send '{0}'".format(s))
-
-		bb.loopback_write(s)
-		ret = bb.loopback_read()
-
-		print("Recv '{0}'".format(''.join([chr(x) for x in ret])))
-
-	if cmd == "testmode":
+		print("{0} dBm".format(rssi))
+	elif cmd == "data":
+		while True:
+			ret = bb.data_read()
+			print("Recv ({0}) '{1}'".format(len(ret), ''.join(["{0:02x}".format(x) for x in ret])))
+	elif cmd == "testmode":
 		bb.testmode(bb.TESTMODE_PATTERN_1010)
 		bb.tx_mode()
-
-	if cmd == "tx":
+	elif cmd == "tx":
 		bb.tx_mode()
-	
-	if cmd == "rx":
+	elif cmd == "rx":
 		bb.rx_mode()
+	elif cmd == "frequency":
+		bb.frequency(int(sys.argv[2]))
+	else:
+		usage()
 
 	sys.exit(0)
 

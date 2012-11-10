@@ -25,7 +25,9 @@
 #include <util/delay.h>
 
 #include <LUFA/Common/Common.h>
-#include <LUFA/Drivers/USB/USB.h>
+//#include <LUFA/Drivers/USB/USB.h>
+
+#include "bluebox.h"
 
 uint32_t boot_key ATTR_NO_INIT;
 
@@ -37,7 +39,7 @@ uint32_t boot_key ATTR_NO_INIT;
 void bootloader_jump_check(void) ATTR_INIT_SECTION(3);
 void bootloader_jump_check(void)
 {
-	// If the reset source was the bootloader and the key is correct, clear it and jump to the bootloader
+	/* If the reset source was the bootloader and the key is correct, clear it and jump to the bootloader */
 	if ((MCUSR & (1<<WDRF)) && (boot_key == MAGIC_BOOT_KEY)) {
 		boot_key = 0;
 		((void (*)(void))BOOTLOADER_START_ADDRESS)(); 
@@ -46,15 +48,14 @@ void bootloader_jump_check(void)
 
 void jump_to_bootloader(void)
 {
-	// Disable all interrupts
+	/* Disable all interrupts */
 	cli();
 
-	// Wait two seconds for the USB detachment to register on the host
+	/* Wait two seconds for the USB detachment to register on the host */
 	for (uint8_t i = 0; i < 128; i++)
 		_delay_ms(16);
 
 	/* Set the bootloader key to the magic value and force a reset */
 	boot_key = MAGIC_BOOT_KEY;
-	wdt_enable(WDTO_250MS);
-	for (;;); 
+	reboot();
 }

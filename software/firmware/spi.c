@@ -59,6 +59,13 @@ void data_done(void)
 	swd_enable();
 }
 
+void data_start(void)
+{
+	PORTF &= ~(_BV(4) | _BV(1));
+	swd_disable();
+	spi_rx_start();
+}
+
 /* Syncword detect interrupt */
 ISR(INT6_vect)
 {

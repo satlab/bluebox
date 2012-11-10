@@ -63,7 +63,7 @@ void setup_hardware(void)
 	spi_init_config(SPI_SLAVE | SPI_MSB_FIRST);
 }
 
-static inline void do_register(int direction, unsigned int regnum)
+static void do_register(int direction, unsigned int regnum)
 {
 	uint32_t value;
 	adf_reg_t reg;
@@ -80,7 +80,7 @@ static inline void do_register(int direction, unsigned int regnum)
 	}
 }
 
-static inline void do_rxtx_mode(int direction, unsigned int wValue)
+static void do_rxtx_mode(int direction, unsigned int wValue)
 {
 	if (wValue != 0)
 		adf_set_tx_mode();
@@ -197,6 +197,9 @@ void EVENT_USB_Device_ControlRequest(void)
 		Endpoint_ClearSETUP();
 
 		switch (USB_ControlRequest.bRequest) {
+		case REQUEST_REGISTER:
+			do_register(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
+			break;
 		case REQUEST_RXTX_MODE:
 			do_rxtx_mode(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
 			break;

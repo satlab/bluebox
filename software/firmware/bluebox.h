@@ -47,6 +47,7 @@
 #define	REQUEST_SYNCWORD	0x09
 #define	REQUEST_RXTX_MODE	0x0A
 #define REQUEST_BITRATE		0x0B
+#define REQUEST_DATA		0x0C
 #define REQUEST_BOOTLOADER 	0xFF
 
 /* Board xtal frequency */

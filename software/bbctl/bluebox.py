@@ -19,11 +19,19 @@
 # THE SOFTWARE.
 
 import time
+import struct
 import usb
 
 class Bluebox(object):
-	VENDOR  = 0x1d50
-	PRODUCT = 0x6666
+	# USB VID/PID
+	VENDOR  		= 0x1d50
+	PRODUCT 		= 0x6666
+
+	# Data Endpoints
+	LOOPBACK_IN  = (usb.util.ENDPOINT_IN  | 1)
+	LOOPBACK_OUT = (usb.util.ENDPOINT_OUT | 2)
+	DATA_IN	     = (usb.util.ENDPOINT_IN  | 3)
+	DATA_OUT     = (usb.util.ENDPOINT_OUT | 4)
 
 	# LED Control
 	REQUEST_LEDCTL		= 0x01
@@ -31,7 +39,7 @@ class Bluebox(object):
 	# RF Control
 	REQUEST_FREQUENCY 	= 0x02
 	REQUEST_MODINDEX	= 0x03
-	REQUEST_CSMARSSI	= 0x04
+	REQUEST_CSMA_RSSI	= 0x04
 	REQUEST_POWER		= 0x05
 	REQUEST_AFC		= 0x06
 	REQUEST_IFBW		= 0x07
@@ -39,6 +47,7 @@ class Bluebox(object):
 	REQUEST_SYNCWORD	= 0x09
 	REQUEST_TEST		= 0x0A
 	REQUEST_REGISTER	= 0x0B
+	REQUEST_RXTX_MODE	= 0x0C
 
 	# Data Control
 	REQUEST_DATA		= 0x10
@@ -46,11 +55,46 @@ class Bluebox(object):
 	# Bootloader Control
 	REQUEST_BOOTLOADER	= 0xFF
 
-	# Data Endpoints
-	LOOPBACK_IN  = (usb.util.ENDPOINT_IN  | 1)
-	LOOPBACK_OUT = (usb.util.ENDPOINT_OUT | 2)
-	DATA_IN	     = (usb.util.ENDPOINT_IN  | 3)
-	DATA_OUT     = (usb.util.ENDPOINT_OUT | 4)
+	# Registers
+	REGISTER_N		= 0
+	REGISTER_VCO_OSC	= 1
+	REGISTER_TXMOD		= 2
+	REGISTER_TXRXCLK	= 3
+	REGISTER_DEMOD		= 4
+	REGISTER_IFFILTER	= 5
+	REGISTER_IFFINECAL	= 6
+	REGISTER_READBACK	= 7
+	REGISTER_PWRDWN		= 8
+	REGISTER_AGC		= 9
+	REGISTER_AFC		= 10
+	REGISTER_SWD		= 11
+	REGISTER_SWDTHRESHOLD	= 12
+	REGISTER_3FSK4FSK	= 13
+	REGISTER_TESTDAC	= 14
+	REGISTER_TESTMODE	= 15
+
+	# Readback select
+	READBACK_RSSI		= 0x0014
+	READBACK_VERSION	= 0x001c
+	READBACK_AFC		= 0x0016
+
+	# Testmode values
+	TESTMODE_PATTERN_CARR	= 1
+	TESTMODE_PATTERN_HIGH	= 2
+	TESTMODE_PATTERN_LOW	= 3
+	TESTMODE_PATTERN_1010	= 4
+	TESTMODE_PATTERN_PN9	= 5
+	TESTMODE_PATTERN_SWD	= 6
+
+	# Sync word
+	SW_LENGTH_12BIT		= 0
+	SW_LENGTH_16BIT		= 1
+	SW_LENGTH_20BIT		= 2
+	SW_LENGTH_24BIT		= 3
+	SW_TOLERANCE_0BER	= 0
+	SW_TOLERANCE_1BER	= 1
+	SW_TOLERANCE_2BER	= 2
+	SW_TOLERANCE_3BER	= 3
 	
 	def __init__(self):
 		self.dev = None
@@ -67,60 +111,78 @@ class Bluebox(object):
 		self.product      = usb.util.get_string(self.dev, 100, self.dev.iProduct)
 		self.serial       = usb.util.get_string(self.dev, 100, self.dev.iSerialNumber)
 
-	def _ctrl_send(self, request, data, timeout=1000):
+	def _ctrl_write(self, request, data, wValue=0, wIndex=0, timeout=1000):
 		bmRequestType = usb.util.build_request_type(
 					usb.util.CTRL_OUT,
 					usb.util.CTRL_TYPE_CLASS,
 					usb.util.CTRL_RECIPIENT_INTERFACE)
-		self.dev.ctrl_transfer(bmRequestType, request, 0, 0, data, timeout)
+		self.dev.ctrl_transfer(bmRequestType, request, wValue, wIndex, data, timeout)
 
-	def _ctrl_read(self, request, length, timeout=1000):
+	def _ctrl_read(self, request, length, wValue=0, wIndex=0, timeout=1000):
 		bmRequestType = usb.util.build_request_type(
 					usb.util.CTRL_IN,
 					usb.util.CTRL_TYPE_CLASS,
 					usb.util.CTRL_RECIPIENT_INTERFACE)
-		return self.dev.ctrl_transfer(bmRequestType, request, 0, 0, length, timeout)
+		return self.dev.ctrl_transfer(bmRequestType, request, wValue, wIndex, length, timeout)
 
 	def led_get(self):
 		return self._ctrl_read(self.REQUEST_LEDCTL, 1)[0]
 
 	def led_set(self, enable):
-		self._ctrl_send(self.REQUEST_LEDCTL, [enable])
+		self._ctrl_write(self.REQUEST_LEDCTL, [enable])
 
 	def led_toggle(self):
 		status = self.led_get()
 		self.led_set(not status)
 
-	def rf_frequency(self, freq):
+	def reg_read(self, reg):
+		return struct.unpack("<I", self._ctrl_read(self.REQUEST_REGISTER, 4, wValue=reg))[0] & 0xffff
+
+	def reg_write(self, reg, value):
+		value = struct.pack("<I", value | reg)
+		self._ctrl_write(self.REQUEST_REGISTER, value, wValue=reg)
+
+	def frequency(self, freq):
 		pass
 
-	def rf_modindex(self, mi):
+	def modindex(self, mi):
 		pass
 
-	def rf_power(self, dbm):
+	def power(self, dbm):
 		pass
 
-	def rf_ifbw(self, ifbw):
+	def ifbw(self, ifbw):
 		pass
 
-	def rf_syncword(self, word, tol):
+	def syncword(self, word, tol):
 		pass
 
-	def rf_training(self, startms, interms):
+	def training(self, startms, interms):
 		pass
 
-	def rf_config(self):
-		pass
+	def version(self):
+		return self.reg_read(self.READBACK_VERSION)
 
-	def rf_reg_read(self, reg, value):
-		pass
+	def rssi(self):
+		gain_correction = (86, 0, 0, 0, 58, 38, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		rb = self.reg_read(self.READBACK_RSSI)
+		rssi = rb & 0x7f
+		gc = (rb & 0x780) >> 7
+		dbm = ((rssi + gain_correction[gc]) * 0.5) - 130;
+		return round(dbm)
 
-	def rf_reg_write(self, reg):
-		pass
+	def testmode(self, mode):
+		self.reg_write(self.REGISTER_TESTMODE, mode << 8)
+
+	def tx_mode(self):
+		self._ctrl_write(self.REQUEST_RXTX_MODE, None, wValue=1)
+
+	def rx_mode(self):
+		self._ctrl_write(self.REQUEST_RXTX_MODE, None, wValue=0)
 
 	def bootloader(self):
 		try:
-			self._ctrl_send(self.REQUEST_BOOTLOADER, None, 0)
+			self._ctrl_write(self.REQUEST_BOOTLOADER, None, 0)
 		except:
 			pass
 

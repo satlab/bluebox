@@ -23,26 +23,59 @@
 import sys
 import bluebox
 
+def usage():
+	print("usage: {0} command [arguments]".format(sys.argv[0]))
+	sys.exit(0)
+
 def main():
+	verbose = False
+
+	if len(sys.argv) < 2:
+		usage()
+
+	cmd = sys.argv[1]
+
 	bb = bluebox.Bluebox()
 
-	print("Found {0} {1} with serial {2} on bus {3}:{4}".format(
-		bb.manufacturer, bb.product, bb.serial,
-		bb.dev.bus, bb.dev.address))
+	if verbose:
+		print("Found {0} {1} with serial {2} on bus {3}:{4}".format(
+			bb.manufacturer, bb.product, bb.serial,
+			bb.dev.bus, bb.dev.address))
 
-	if len(sys.argv) == 2 and sys.argv[1] == "bootloader":
+	if cmd == "bootloader":
 		bb.bootloader()
-		sys.exit(0)
 
-	bb.led_toggle()
+	if cmd == "version":
+		ver = bb.version()
+		print(hex(ver))
 
-	s = sys.argv[1] if len(sys.argv) > 1 else "loopback"
-	print("Send '{0}'".format(s))
+	if cmd == "rssi":
+		rssi = bb.rssi()
+		print(rssi)
 
-	bb.loopback_write(s)
-	ret = bb.loopback_read()
+	if cmd == "led":
+		bb.led_toggle()
 
-	print("Recv '{0}'".format(''.join([chr(x) for x in ret])))
+	if cmd == "loopback":
+		s = sys.argv[2] if len(sys.argv) > 2 else "loopback"
+		print("Send '{0}'".format(s))
+
+		bb.loopback_write(s)
+		ret = bb.loopback_read()
+
+		print("Recv '{0}'".format(''.join([chr(x) for x in ret])))
+
+	if cmd == "testmode":
+		bb.testmode(bb.TESTMODE_PATTERN_1010)
+		bb.tx_mode()
+
+	if cmd == "tx":
+		bb.tx_mode()
+	
+	if cmd == "rx":
+		bb.rx_mode()
+
+	sys.exit(0)
 
 if __name__ == "__main__":
 	main()

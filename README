@@ -1,6 +1,6 @@
 The bluebox is a USB-powered ground station box for the AAUSAT3 cubesat satellite
 
-The device firmware, control software and hardware is licensed under an MIT license.
+The device firmware, control software and hardware is licensed under the MIT license.
 
 How to build and flash the firmware
 ------------------------------------

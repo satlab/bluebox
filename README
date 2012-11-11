@@ -1,1 +1,25 @@
 The bluebox is a USB-powered ground station box for the AAUSAT3 cubesat satellite
+
+The device firmware, control software and hardware is licensed under an MIT license.
+
+How to build and flash the firmware
+------------------------------------
+
+In order to communicate with device without being root, write this line to /etc/udev/rules.d/49-bluebox.rules:
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="6666", MODE:="0666"
+
+And this line to /etc/udev/rules.d/49-atmel.rules:
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="03eb", ATTRS{idProduct}=="2ff4", MODE:="0666"
+
+Now, compile and flash the software. The bbctl bootloader step can be omitted if you're flashing the device for the first time.
+
+$ cd bluebox/software/firmware
+$ make clean all
+$ ../bbctl/bbctl bootloader
+$ make program
+
+Finally, test the device by reading back the silicon revision of the ADF7021 RF chip:
+
+$ cd bluebox/software/bbtcl
+$ ./bbctl version
+0x2104

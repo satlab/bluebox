@@ -96,8 +96,8 @@ const USB_Descriptor_String_t PROGMEM BlueBox_LanguageString = {
 };
 
 const USB_Descriptor_String_t PROGMEM BlueBox_ManufacturerString = {
-	.Header                 = {.Size = USB_STRING_LEN(7), .Type = DTYPE_String},
-	.UnicodeString          = L"AAUSAT3"
+	.Header                 = {.Size = USB_STRING_LEN(14), .Type = DTYPE_String},
+	.UnicodeString          = L"Satlab/AAUSAT3"
 };
 
 const USB_Descriptor_String_t PROGMEM BlueBox_ProductString = {
@@ -107,7 +107,7 @@ const USB_Descriptor_String_t PROGMEM BlueBox_ProductString = {
 
 const USB_Descriptor_String_t PROGMEM BlueBox_SerialString = {
 	.Header                 = {.Size = USB_STRING_LEN(5), .Type = DTYPE_String},
-	.UnicodeString          = L"00001"
+	.UnicodeString          = L"0001A"
 };
 
 uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,

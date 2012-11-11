@@ -29,7 +29,7 @@
 #include "bluebox.h"
 #include "spi.h"
 
-#define DATA_LENGTH	150
+#define DATA_LENGTH	64
 #define NUM_BUFS	2
 
 uint8_t data[NUM_BUFS][DATA_LENGTH];

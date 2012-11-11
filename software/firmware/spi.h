@@ -151,6 +151,7 @@ static inline void swd_disable(void)
 void vTaskFindlength(void * pvParameters);
 void spi_init(unsigned char config);
 void spi_rx_start(void);
+void spi_rx_done(void);
 void spi_tx_start(void);
 void spi_tx_done(void);
 int spi_tx_wait(void);

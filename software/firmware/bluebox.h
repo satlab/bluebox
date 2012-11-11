@@ -60,8 +60,8 @@
 #define RX_WAIT_TIMEOUT		120U
 #define CSMA_TIMEOUT		60U
 #define CSMA_RSSI		-70
-#define BAUD_RATE		9600
-#define MOD_INDEX		2
+#define BAUD_RATE		2400
+#define MOD_INDEX		8
 #define PA_SETTING		8
 #define AFC_RANGE		10
 #define AFC_KI			11

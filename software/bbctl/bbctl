@@ -37,7 +37,11 @@ def main():
 
 	cmd = sys.argv[1]
 
-	bb = bluebox.Bluebox()
+	try:
+		bb = bluebox.Bluebox()
+	except Exception as e:
+		print("Failed to connect to BlueBox: {0}".format(e))
+		sys.exit(0)
 
 	if verbose:
 		print("Found {0} {1} with serial {2} on bus {3}:{4}".format(

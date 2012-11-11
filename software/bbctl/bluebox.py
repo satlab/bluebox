@@ -44,9 +44,6 @@ class Bluebox(object):
 	REQUEST_RXTX_MODE	= 0x0A
 	REQUEST_BITRATE		= 0x0B
 
-	# Data Control
-	REQUEST_DATA		= 0x10
-
 	# Bootloader Control
 	REQUEST_BOOTLOADER	= 0xFF
 
@@ -200,7 +197,7 @@ class Bluebox(object):
 		ret = None
 		while ret is None:
 			try:
-				ret = self.dev.read(self.DATA_IN, 256, 0, timeout=1000)
+				ret = self.dev.read(self.DATA_IN, 64, 0, timeout=1000)
 			except usb.core.USBError:
 				pass
 			except:

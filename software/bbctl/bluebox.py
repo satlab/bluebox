@@ -191,7 +191,7 @@ class Bluebox(object):
 			pass
 
 	def transmit(self, text):
-		self.dev.write(self.DATA_OUT, text, timeout=1)
+		self.dev.write(self.DATA_OUT, text, timeout=1000)
 
 	def receive(self):
 		ret = None

@@ -190,14 +190,14 @@ class Bluebox(object):
 		except:
 			pass
 
-	def data_write(self, text):
-		self.dev.write(self.DATA_OUT, text, 0)
+	def transmit(self, text):
+		self.dev.write(self.DATA_OUT, text, timeout=1)
 
-	def data_read(self):
+	def receive(self):
 		ret = None
 		while ret is None:
 			try:
-				ret = self.dev.read(self.DATA_IN, 64, 0, timeout=1000)
+				ret = self.dev.read(self.DATA_IN, 256, 0, timeout=1000)
 			except usb.core.USBError:
 				pass
 			except:

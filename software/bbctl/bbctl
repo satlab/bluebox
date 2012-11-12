@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from __future__ import print_function
+
 import sys
 import time
 import os.path
@@ -30,8 +32,6 @@ def usage():
 	sys.exit(0)
 
 def main():
-	verbose = False
-
 	if len(sys.argv) < 2:
 		usage()
 
@@ -43,12 +43,12 @@ def main():
 		print("Failed to connect to BlueBox: {0}".format(e))
 		sys.exit(0)
 
-	if verbose:
+	if cmd == "devices":
 		print("Found {0} {1} with serial {2} on bus {3}:{4}".format(
 			bb.manufacturer, bb.product, bb.serial,
 			bb.dev.bus, bb.dev.address))
 	
-	if cmd == "bootloader":
+	elif cmd == "bootloader":
 		bb.bootloader()
 
 	elif cmd == "version":
@@ -59,14 +59,33 @@ def main():
 		rssi = bb.rssi()
 		print("{0} dBm".format(rssi))
 
-	elif cmd == "data":
-		last = 0
+	elif cmd == "signal":
 		while True:
-			data = bb.data_read()
+			try:
+				rssi = bb.rssi()
+				if rssi < -125:
+					rssi = -125
+				if rssi > -47:
+					rssi = -47
+				sys.stdout.write("\r{0} dBm ".format(rssi))
+				sys.stdout.flush()
+				time.sleep(0.05)
+			except:
+				sys.exit(0)
+
+	elif cmd == "receive":
+		last = time.time()
+		while True:
+			data = bb.receive()
 			if data is None:
 				break
 			print("Recv ({0}) {1:.2f}s '{2}'".format(len(data), time.time() - last, ''.join(["{0:02x}".format(x) for x in data])))
 			last = time.time()
+
+	elif cmd == "transmit":
+		if len(sys.argv) > 2:
+			bytes = [int(x, 16) for x in sys.argv[2]]
+			bb.transmit(bytes)
 
 	elif cmd == "testmode":
 		if len(sys.argv) > 2:

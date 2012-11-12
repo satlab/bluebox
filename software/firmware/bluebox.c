@@ -29,6 +29,18 @@
 #include "adf7021.h"
 #include "bootloader.h"
 #include "spi.h"
+#include "led.h"
+
+#define rf_config_single(_type, _name) 						\
+	_type _name; 								\
+	if (direction == ENDPOINT_DIR_OUT) {					\
+		Endpoint_Read_Control_Stream_LE(&_name, sizeof(_name));		\
+		conf._name = _name;						\
+		adf_configure();						\
+	} else if (direction == ENDPOINT_DIR_IN) {				\
+		Endpoint_Write_Control_Stream_LE(&conf._name, sizeof(conf._name)); \
+	}
+
 
 struct bluebox_config conf = {
 	.freq = FREQUENCY,
@@ -43,7 +55,10 @@ struct bluebox_config conf = {
 	.if_bw = IF_FILTER_BW,
 	.sw = SYNC_WORD,
 	.swtol = SYNC_WORD_TOLERANCE,	
-	.swlen = SYNC_WORD_LENGTH,
+	.swlen = SYNC_WORD_BITS,
+	.do_rs = true,
+	.do_viterbi = true,
+	.callsign = CALLSIGN,
 };
 
 void setup_hardware(void)
@@ -54,13 +69,21 @@ void setup_hardware(void)
 	clock_prescale_set(clock_div_1);
 
 	USB_Init();
-	DDRF |= _BV(0) | _BV(1) | _BV(4);
-	PORTF &= ~( _BV(0) | _BV(1) | _BV(4));
-
-	DDRD &= ~_BV(4);
+	led_init();
 
 	/* Initialize SPI */
 	spi_init_config(SPI_SLAVE | SPI_MSB_FIRST);
+}
+
+void callsign_init(char *cs)
+{
+	int i;
+
+	for (i = 0; i < CALLSIGN_LENGTH; i++) {
+		conf.callsign[i] = cs[i];
+		if (i < SYNC_WORD_LENGTH)
+			conf.sw |= (uint32_t)conf.callsign[i] << 8 * (SYNC_WORD_LENGTH - i - 1);
+	}
 }
 
 static void do_register(int direction, unsigned int regnum)
@@ -87,16 +110,6 @@ static void do_rxtx_mode(int direction, unsigned int wValue)
 	else
 		adf_set_rx_mode();
 }
-
-#define rf_config_single(_type, _name) 						\
-	_type _name; 								\
-	if (direction == ENDPOINT_DIR_OUT) {					\
-		Endpoint_Read_Control_Stream_LE(&_name, sizeof(_name));		\
-		conf._name = _name;						\
-		adf_configure();						\
-	} else if (direction == ENDPOINT_DIR_IN) {				\
-		Endpoint_Write_Control_Stream_LE(&conf._name, sizeof(conf._name)); \
-	}
 
 static void do_frequency(int direction, unsigned int vWalue)
 {
@@ -143,97 +156,60 @@ static void do_bitrate(int direction, unsigned int vWalue)
 	rf_config_single(uint16_t, speed);
 }
 
+static void do_control_request(int direction)
+{
+	switch (USB_ControlRequest.bRequest) {
+	case REQUEST_REGISTER:
+		do_register(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_RXTX_MODE:
+		do_rxtx_mode(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_FREQUENCY:
+		do_frequency(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_MODINDEX:
+		do_modindex(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_CSMA_RSSI:
+		do_csma_rssi(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_POWER:
+		do_power(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_AFC:
+		do_acf(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_IFBW:
+		do_ifbw(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_TRAINING:	
+		do_training(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_SYNCWORD:	
+		do_syncword(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_BITRATE:
+		do_bitrate(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_BOOTLOADER:
+		jump_to_bootloader();
+		break;
+	}
+}
+
 void EVENT_USB_Device_ControlRequest(void)
 {
 	switch (USB_ControlRequest.bmRequestType) {
 	case (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE):
-
 		Endpoint_ClearSETUP();
-
-		switch (USB_ControlRequest.bRequest) {
-		case REQUEST_REGISTER:
-			do_register(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_RXTX_MODE:
-			do_rxtx_mode(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_FREQUENCY:
-			do_frequency(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_MODINDEX:
-			do_modindex(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_CSMA_RSSI:
-			do_csma_rssi(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_POWER:
-			do_power(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_AFC:
-			do_acf(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_IFBW:
-			do_ifbw(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_TRAINING:	
-			do_training(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_SYNCWORD:	
-			do_syncword(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_BITRATE:
-			do_bitrate(ENDPOINT_DIR_OUT, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_BOOTLOADER:
-			jump_to_bootloader();
-			break;
-		}
-
+		do_control_request(ENDPOINT_DIR_OUT);
 		Endpoint_ClearIN();
-
 		break;
 	case (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE):
-
 		Endpoint_ClearSETUP();
-
-		switch (USB_ControlRequest.bRequest) {
-		case REQUEST_REGISTER:
-			do_register(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_RXTX_MODE:
-			do_rxtx_mode(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_FREQUENCY:
-			do_frequency(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_MODINDEX:
-			do_modindex(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_CSMA_RSSI:
-			do_csma_rssi(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_POWER:
-			do_power(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_AFC:
-			do_acf(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_IFBW:
-			do_ifbw(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_TRAINING:	
-			do_training(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_SYNCWORD:	
-			do_syncword(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		case REQUEST_BITRATE:
-			do_bitrate(ENDPOINT_DIR_IN, USB_ControlRequest.wValue);
-			break;
-		}
-
+		do_control_request(ENDPOINT_DIR_IN);
 		Endpoint_ClearOUT();
-
 		break;
 	default:
 		break;
@@ -270,6 +246,8 @@ int main(void)
 {
 	setup_hardware();
 	GlobalInterruptEnable();
+
+	callsign_init(conf.callsign);
 
 	adf_set_power_on(XTAL_FREQ);
 	adf_configure();

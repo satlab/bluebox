@@ -70,7 +70,26 @@
 #define IF_FILTER_BW		2
 #define SYNC_WORD		0x4f5a33
 #define SYNC_WORD_TOLERANCE	ADF_SYNC_WORD_ERROR_TOLERANCE_1
-#define SYNC_WORD_LENGTH	ADF_SYNC_WORD_LEN_24
+#define SYNC_WORD_BITS		ADF_SYNC_WORD_LEN_24
+
+/* AAUSAT3 packet format */
+#define CALLSIGN		"OZ3CUB"
+#define CALLSIGN_LENGTH		6
+#define SYNC_WORD_LENGTH	3
+#define CUB_LENGTH		(CALLSIGN_LENGTH - SYNC_WORD_LENGTH)
+#define FSM_POSITION		(CALLSIGN_LENGTH - SYNC_WORD_LENGTH)
+#define SHORT_FRAME_MARKER	0xA6
+#define LONG_FRAME_MARKER	0x59
+#define FSM_LENGTH		1
+#define SHORT_FRAME_LIMIT	25
+#define LONG_FRAME_LIMIT	86
+#define RS_BLOCK_LENGTH		255
+#define RS_LENGTH		32
+#define VITERBI_RATE		2
+#define VITERBI_CONSTRAINT	7
+#define VITERBI_TAIL		1
+#define CSP_OVERHEAD		8
+#define BITS_PER_BYTE		8
 
 struct bluebox_config {
 	uint32_t freq;
@@ -86,7 +105,12 @@ struct bluebox_config {
 	uint32_t sw;
 	uint8_t swtol;
 	uint8_t swlen;
+	uint8_t do_rs;
+	uint8_t do_viterbi;
+	char callsign[CALLSIGN_LENGTH];
 };
+
+extern struct bluebox_config conf;
 
 void SetupHardware(void);
 void EVENT_USB_Device_ControlRequest(void);

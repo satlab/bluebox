@@ -91,6 +91,10 @@
 #define CSP_OVERHEAD		8
 #define BITS_PER_BYTE		8
 
+/* Buffer configuration */
+#define DATA_LENGTH	256
+#define NUM_BUFS	2
+
 struct bluebox_config {
 	uint32_t freq;
 	int16_t csma_rssi;

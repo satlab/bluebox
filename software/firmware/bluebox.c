@@ -218,28 +218,24 @@ void EVENT_USB_Device_ControlRequest(void)
 
 void bluebox_task(void)
 {
-	static uint8_t text[IN_EPSIZE] = "testing";
-
 	if (USB_DeviceState != DEVICE_STATE_Configured)
 		return;
 
 	Endpoint_SelectEndpoint(OUT_EPADDR);
 	if (Endpoint_IsOUTReceived()) {
 		if (Endpoint_IsReadWriteAllowed()) {
-			memset(text, 0, sizeof(text));
-			Endpoint_Read_Stream_LE(&text, sizeof(text), NULL);
+			memset(&data[front], 0x55, DATA_LENGTH);
+			Endpoint_Read_Stream_LE(&data[front], DATA_LENGTH, NULL);
+			adf_set_tx_mode();
+			spi_tx_start();
 		}
+
 		Endpoint_ClearOUT();
 
 		/* Clear pending data in IN endpoint */
 		Endpoint_SelectEndpoint(IN_EPADDR);
 		Endpoint_AbortPendingIN();
 	}
-
-	/*if (Endpoint_IsINReady()) {
-		Endpoint_Write_Stream_LE(&text, sizeof(text), NULL);
-		Endpoint_ClearIN();
-	}*/
 }
 
 int main(void)

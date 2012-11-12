@@ -30,19 +30,22 @@
 #include "spi.h"
 #include "led.h"
 
-#define DATA_LENGTH	256
-#define NUM_BUFS	2
-
 uint8_t data[NUM_BUFS][DATA_LENGTH];
-uint16_t bytes, target;
 uint8_t front;
 
+static uint16_t bytes, target;
+
+static volatile unsigned char spi_mode = SPI_MODE_RX;
 void spi_rx_start(void)
 {
+	spi_mode = SPI_MODE_RX;
 	swd_disable();
-	led_on(LED_ALL);
+
+	led_on(LED_RECEIVE);
+
 	bytes = 0;
 	target = DATA_LENGTH;
+
 	spi_enable();
 	spi_enable_it();
 }
@@ -52,8 +55,31 @@ void spi_rx_done(void)
 	spi_disable_it();
 	spi_disable();
 	swd_enable();
-	led_off(LED_ALL);
+	led_off(LED_RECEIVE);
 }
+
+void spi_tx_start(void)
+{
+	spi_mode = SPI_MODE_TX;
+	swd_disable();
+
+	led_on(LED_TRANSMIT);
+
+	bytes = 0;
+	target = DATA_LENGTH;
+	
+	spi_enable();
+	spi_enable_it();
+}
+
+void spi_tx_done(void)
+{
+	spi_disable_it();
+	spi_disable();
+	swd_enable();
+	led_off(LED_TRANSMIT);
+}
+
 
 void data_done(void)
 {
@@ -140,26 +166,34 @@ ISR(INT6_vect)
 
 ISR(SPI_STC_vect)
 {
-	data[front][bytes++] = spi_read_data();
+	if (spi_mode == SPI_MODE_TX) {
+		spi_write_data(data[front][bytes++]);
+		if (bytes >= target) {
+			spi_tx_done();
+			adf_set_rx_mode();
+		}
+	} else {
+		data[front][bytes++] = spi_read_data();
 
-	if (bytes == FSM_POSITION) {
-		uint8_t errs = frame_cuberrs(&data[front][0]);
-		if (errs > SYNC_WORD_TOLERANCE * 2) {
+		if (bytes == FSM_POSITION) {
+			uint8_t errs = frame_cuberrs(&data[front][0]);
+			if (errs > SYNC_WORD_TOLERANCE * 2) {
+				spi_rx_done();
+				return;
+			}
+		}
+
+		/* Set frame length from FSM */
+		if (bytes == FSM_POSITION + 1) {
+			uint8_t type = frame_type(data[front][bytes-1]);
+			target = rx_frame_spi_length(type);
+		}
+
+		if (bytes >= target) {
 			spi_rx_done();
+			data_done();
+			adf_set_threshold_free();
 			return;
 		}
-	}
-
-	/* Set frame length from FSM */
-	if (bytes == FSM_POSITION + 1) {
-		uint8_t type = frame_type(data[front][bytes-1]);
-		target = rx_frame_spi_length(type);
-	}
-
-	if (bytes >= target) {
-		spi_rx_done();
-		data_done();
-		adf_set_threshold_free();
-		return;
 	}
 }

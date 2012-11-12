@@ -156,4 +156,7 @@ void spi_tx_start(void);
 void spi_tx_done(void);
 int spi_tx_wait(void);
 
+extern uint8_t data[NUM_BUFS][DATA_LENGTH];
+extern uint8_t front;
+
 #endif /* _SPI_H_ */

@@ -45,7 +45,7 @@
 struct bluebox_config conf = {
 	.freq = FREQUENCY,
 	.csma_rssi = CSMA_RSSI,
-	.speed = BAUD_RATE,
+	.bitrate = BAUD_RATE,
 	.modindex = MOD_INDEX,
 	.pa_setting = PA_SETTING,
 	.afc_range = AFC_RANGE,
@@ -148,12 +148,12 @@ static void do_training(int direction, unsigned int vWalue)
 
 static void do_syncword(int direction, unsigned int vWalue)
 {
-	/* FIXME: add sync word config */
+	rf_config_single(uint32_t, sw);
 }
 
 static void do_bitrate(int direction, unsigned int vWalue)
 {
-	rf_config_single(uint16_t, speed);
+	rf_config_single(uint16_t, bitrate);
 }
 
 static void do_control_request(int direction)

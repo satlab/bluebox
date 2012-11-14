@@ -104,10 +104,12 @@ static inline void swd_disable(void)
 #define spi_select_master_mode()  (SPCR |=  (1<<MSTR))
 #define spi_select_slave_mode()   (SPCR &= ~(1<<MSTR))
 
-#define spi_init_config(config)   { spi_init_bus( (((unsigned char)config) & MSK_SPI_MASTER) ); \
-                                    SPCR &= ~MSK_SPI_CONFIG;                       \
-                                    SPCR |= ((unsigned char)config) & MSK_SPI_CONFIG;         \
-                                    SPSR |= (unsigned char)(config >> 8);                     }
+#define spi_init_config(config)		do { \
+						spi_init_bus((((unsigned char)config) & MSK_SPI_MASTER)); \
+						SPCR &= ~MSK_SPI_CONFIG;				\
+						SPCR |= ((unsigned char)config) & MSK_SPI_CONFIG;	\
+						SPSR |= (unsigned char)(config >> 8);			\
+					} while (0)
 
 #define spi_read_data()           (SPDR)
 #define spi_get_byte()            (SPDR)
@@ -124,11 +126,14 @@ static inline void swd_disable(void)
 #define spi_tx_ready()            (SPSR & (1<<SPIF))
 #define spi_rx_ready()            (spi_tx_ready())
 
-#define spi_init_bus(master)      (                                             \
-                                  (master==0) ?                                 \
-                                  (DDRB|=(1<<DDB3), DDRB &= ~(1<<DDB1)) :       \
-                                  (spi_init_ss(), DDRB|=(1<<DDB2)|(1<<DDB1))    \
-                                  )
+#define spi_init_bus(master)		do {					\
+						if (master==0) {		\
+							DDRB |= (1<<DDB3);	\
+							DDRB &= ~(1<<DDB1);	\
+						} else {			\
+							spi_init_ss();		\
+							DDRB |= (1 << DDB2) | (1 << DDB1); \
+					}} while (0)
 
 /* MASTER usage ONLY */
 #define spi_init_ss()             (DDRB  |=  (1<<DDB0))  // -- Can be user re-defined 

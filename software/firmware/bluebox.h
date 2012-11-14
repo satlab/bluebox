@@ -98,7 +98,7 @@
 struct bluebox_config {
 	uint32_t freq;
 	int16_t csma_rssi;
-	uint16_t speed;
+	uint16_t bitrate;
 	uint8_t modindex;
 	uint8_t pa_setting;
 	uint8_t afc_range;

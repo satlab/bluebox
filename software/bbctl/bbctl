@@ -25,17 +25,172 @@ from __future__ import print_function
 import sys
 import time
 import os.path
+import argparse
 import bluebox
 
-def usage():
-	print("usage: {0} command [arguments]".format(os.path.basename(sys.argv[0])))
-	sys.exit(0)
+subcommands = {}
+def subcommand(help=""):
+	def _decorator(func):
+		c = {"func": func, "help": help, "args": []}
+		subcommands[func.__name__] = c
+		return func
+	return _decorator
+
+def argument(*args, **kwargs):
+	def _decorator(func):
+		_option = (args, kwargs)
+		subcommands[func.__name__]["args"].append(_option)
+		return func
+	return _decorator
+	
+@subcommand("boot device into bootloader")
+def bootloader(args, bb):
+	bb.bootloader()
+
+@subcommand("show RF silicon revision")
+def version(args, bb):
+	ver = bb.version()
+	print(hex(ver))
+
+@subcommand("show current RSSI reading in dBm")
+def rssi(args, bb):
+	rssi = bb.rssi()
+	print("{0} dBm".format(rssi))
+
+@subcommand("continuously show RSSI reading")
+def signal(args, bb):
+	minimum = -130
+	maximum = -47
+	width = 40
+
+	while True:
+		try:
+			rssi = bb.rssi()
+			if rssi < minimum:
+				rssi = minimum
+			if rssi > maximum:
+				rssi = maximum
+
+			progress = (rssi+abs(minimum))*width/(maximum+abs(minimum))
+
+			bar = "[" + progress * "#" + (width-progress) * " " + "]"
+
+			sys.stdout.write("\r{0} {1} dBm ".format(bar, rssi))
+			sys.stdout.flush()
+			time.sleep(0.5)
+		except Exception as e:
+			print(e)
+			break
+
+@subcommand("receive packets and print to screen")
+def receive(args, bb):
+	last = time.time()
+	while True:
+		data = bb.receive()
+		if data is None:
+			break
+		print("Recv ({0}) {1:.2f}s '{2}'".format(len(data), time.time() - last, ''.join(["{0:02x}".format(x) for x in data])))
+		last = time.time()
+
+@argument('packet', help="packet hex string to transmit")
+@subcommand("transmit packet data")
+def transmit(args, bb):
+	bytes = args.packet.decode("hex")
+	bb.transmit(bytes)
+
+@argument('mode', type=int, help="testmode type")
+@subcommand("put device in test mode")
+def testmode(args, bb):
+	if args.mode == "carrier":
+		bb.testmode(bb.TESTMODE_OFF)
+		bb.tx_mode()
+	elif args.mode == "high":
+		bb.testmode(bb.TESTMODE_PATTERN_HIGH)
+		bb.tx_mode()
+	elif args.mode == "low":
+		bb.testmode(bb.TESTMODE_PATTERN_LOW)
+		bb.tx_mode()
+	elif args.mode == "pn9":
+		bb.testmode(bb.TESTMODE_PATTERN_PN9)
+		bb.tx_mode()
+	elif args.mode == "1010":
+		bb.testmode(bb.TESTMODE_PATTERN_1010)
+		bb.tx_mode()
+	elif args.mode == "syncword":
+		bb.testmode(bb.TESTMODE_PATTERN_SWD)
+		bb.tx_mode()
+	elif args.mode == "off":
+		bb.testmode(bb.TESTMODE_OFF)
+		bb.rx_mode()
+
+@subcommand("set device in transmit mode")
+def txmode(args, bb):
+	bb.tx_mode()
+
+@subcommand("set device in receive mode")
+def rxmode(args, bb):
+	bb.rx_mode()
+
+@argument('frequency', type=int, help="requested frequency", nargs="?", default=None)
+@subcommand("get or set device frequency")
+def frequency(args, bb):
+	if args.frequency is not None:
+		bb.set_frequency(args.frequency)
+	else:
+		print(bb.get_frequency())
+
+@argument('bitrate', type=int, help="requested bitrate", nargs="?", default=None)
+@subcommand("get or set device bitrate")
+def bitrate(args, bb):
+	if args.bitrate is not None:
+		bb.set_bitrate(args.bitrate)
+	else:
+		print(bb.get_bitrate())
+
+@argument('modindex', type=int, help="requested modulation index", nargs="?", default=None)
+@subcommand("get or set device modulation index")
+def modindex(args, bb):
+	if args.modindex is not None:
+		bb.set_modindex(args.modindex)
+	else:
+		print(bb.get_modindex())
+
+@argument('command', help="detailed help command", nargs="?", default=None)
+@subcommand("show detailed help for subcommand")
+def help(args, parser):
+	if args.command is not None:
+		subcommands[args.command]["parser"].print_help()
+	else:
+		parser.print_help()
+
+desc = """
+Main BlueBox satellite ground station control program. bbctl is used for
+controlling frequency, bitrate, etc. of the device and to transmit and
+receive data.
+
+See 'bbctl help <command>' for more information on a specific command.
+"""
 
 def main():
-	if len(sys.argv) < 2:
-		usage()
+	parser = argparse.ArgumentParser(prog="bbctl", description=desc, formatter_class=argparse.RawDescriptionHelpFormatter)
+	parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose output")
+	subparsers = parser.add_subparsers(help='valid subcommands', title="Available subcommands", metavar="<command>")
 
-	cmd = sys.argv[1]
+	for sub in sorted(subcommands):
+		subparser = subparsers.add_parser(sub, help=subcommands[sub]["help"])
+		subcommands[sub]["parser"] = subparser
+		for args, kwargs in subcommands[sub]["args"]:
+			subparser.add_argument(*args, metavar="<"+args[0]+">", **kwargs)
+		subparser.set_defaults(func=subcommands[sub]["func"])
+
+	if len(sys.argv) < 2:
+		parser.print_help()
+		sys.exit(1)
+
+	args = parser.parse_args()
+	if args.func == help:
+		args.func(args, parser)
+		sys.exit(0)
 
 	try:
 		bb = bluebox.Bluebox()
@@ -43,104 +198,14 @@ def main():
 		print("Failed to connect to BlueBox: {0}".format(e))
 		sys.exit(0)
 
-	if cmd == "devices":
+	if args.verbose:
 		print("Found {0} {1} with serial {2} on bus {3}:{4}".format(
-			bb.manufacturer, bb.product, bb.serial,
-			bb.dev.bus, bb.dev.address))
-	
-	elif cmd == "bootloader":
-		bb.bootloader()
+		      bb.manufacturer, bb.product, bb.serial, bb.bus, bb.address))
 
-	elif cmd == "version":
-		ver = bb.version()
-		print(hex(ver))
-
-	elif cmd == "rssi":
-		rssi = bb.rssi()
-		print("{0} dBm".format(rssi))
-
-	elif cmd == "signal":
-		while True:
-			try:
-				rssi = bb.rssi()
-				if rssi < -125:
-					rssi = -125
-				if rssi > -47:
-					rssi = -47
-				sys.stdout.write("\r{0} dBm ".format(rssi))
-				sys.stdout.flush()
-				time.sleep(0.05)
-			except:
-				sys.exit(0)
-
-	elif cmd == "receive":
-		last = time.time()
-		while True:
-			data = bb.receive()
-			if data is None:
-				break
-			print("Recv ({0}) {1:.2f}s '{2}'".format(len(data), time.time() - last, ''.join(["{0:02x}".format(x) for x in data])))
-			last = time.time()
-
-	elif cmd == "transmit":
-		if len(sys.argv) > 2:
-			bytes = [int(x, 16) for x in sys.argv[2]]
-			bb.transmit(bytes)
-
-	elif cmd == "testmode":
-		if len(sys.argv) > 2:
-			if sys.argv[2] == "carrier":
-				bb.testmode(bb.TESTMODE_OFF)
-				bb.tx_mode()
-			elif sys.argv[2] == "high":
-				bb.testmode(bb.TESTMODE_PATTERN_HIGH)
-				bb.tx_mode()
-			elif sys.argv[2] == "low":
-				bb.testmode(bb.TESTMODE_PATTERN_LOW)
-				bb.tx_mode()
-			elif sys.argv[2] == "pn9":
-				bb.testmode(bb.TESTMODE_PATTERN_PN9)
-				bb.tx_mode()
-			elif sys.argv[2] == "1010":
-				bb.testmode(bb.TESTMODE_PATTERN_1010)
-				bb.tx_mode()
-			elif sys.argv[2] == "syncword":
-				bb.testmode(bb.TESTMODE_PATTERN_SWD)
-				bb.tx_mode()
-			elif sys.argv[2] == "off":
-				bb.testmode(bb.TESTMODE_OFF)
-				bb.rx_mode()
-		else:
-			bb.testmode(bb.TESTMODE_OFF)
-			bb.rx_mode()
-
-	elif cmd == "tx":
-		bb.tx_mode()
-
-	elif cmd == "rx":
-		bb.rx_mode()
-
-	elif cmd == "frequency":
-		if len(sys.argv) > 2:
-			bb.set_frequency(int(sys.argv[2]))
-		else:
-			print(bb.get_frequency())
-
-	elif cmd == "bitrate":
-		if len(sys.argv) > 2:
-			bb.set_bitrate(int(sys.argv[2]))
-		else:
-			print(bb.get_bitrate())
-
-	elif cmd == "modindex":
-		if len(sys.argv) > 2:
-			bb.set_modindex(int(sys.argv[2]))
-		else:
-			print(bb.get_modindex())
-
-	else:
-		usage()
-
+	try:
+		args.func(args, bb)
+	except Exception as e:
+		print("Error: {0}".format(str(e)))
 	sys.exit(0)
 
 if __name__ == "__main__":

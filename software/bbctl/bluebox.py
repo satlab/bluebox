@@ -90,10 +90,12 @@ class Bluebox(object):
 	SW_TOLERANCE_3BER	= 3
 	
 	def __init__(self):
-		self.dev = None
-		while self.dev is None:
-			self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
-			time.sleep(0.1)
+		self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
+		if self.dev is None:
+			print("waiting for device ...")
+			while self.dev is None:
+				self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
+				time.sleep(0.1)
 
 		if self.dev.is_kernel_driver_active(0) is True:
 			self.dev.detach_kernel_driver(0)
@@ -103,6 +105,8 @@ class Bluebox(object):
 		self.manufacturer = usb.util.get_string(self.dev, 100, self.dev.iManufacturer)
 		self.product      = usb.util.get_string(self.dev, 100, self.dev.iProduct)
 		self.serial       = usb.util.get_string(self.dev, 100, self.dev.iSerialNumber)
+		self.bus          = self.dev.bus
+		self.address      = self.dev.address
 
 	def _ctrl_write(self, request, data, wValue=0, wIndex=0, timeout=1000):
 		bmRequestType = usb.util.build_request_type(
@@ -161,8 +165,14 @@ class Bluebox(object):
 	def syncword(self, word, tol):
 		pass
 
-	def training(self, startms, interms):
+	def training(self, startbytes, interbytes):
 		pass
+
+	def training_ms(self, startms, interms):
+		bitrate = self.get_bitrate()
+		startbytes = (startms * bitrate) / 1000 / 8
+		interbytes = (interms * bitrate) / 1000 / 8
+		self.training(startbytes, interbytes)
 
 	def version(self):
 		return self.reg_read(self.READBACK_VERSION)
@@ -185,10 +195,8 @@ class Bluebox(object):
 		self._ctrl_write(self.REQUEST_RXTX_MODE, None, wValue=0)
 
 	def bootloader(self):
-		try:
-			self._ctrl_write(self.REQUEST_BOOTLOADER, None, 0)
-		except:
-			pass
+		try: self._ctrl_write(self.REQUEST_BOOTLOADER, None, 0)
+		except: pass
 
 	def transmit(self, text):
 		self.dev.write(self.DATA_OUT, text, timeout=1000)

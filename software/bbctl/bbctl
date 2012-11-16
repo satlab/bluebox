@@ -229,7 +229,8 @@ def main():
 		subparser = subparsers.add_parser(sub, help=subcommands[sub]["help"], description=subcommands[sub]["description"])
 		subcommands[sub]["parser"] = subparser
 		for args, kwargs in subcommands[sub]["args"]:
-			subparser.add_argument(*args, metavar="<"+args[0]+">", **kwargs)
+			arg = args[0] if kwargs.get("nargs", "") == "?" else "<" + args[0] + ">"
+			subparser.add_argument(*args, metavar=arg, **kwargs)
 		subparser.set_defaults(func=subcommands[sub]["func"])
 
 	if len(sys.argv) < 2:

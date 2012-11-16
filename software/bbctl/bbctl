@@ -29,9 +29,9 @@ import argparse
 import bluebox
 
 subcommands = {}
-def subcommand(help=""):
+def subcommand(help="", description=""):
 	def _decorator(func):
-		c = {"func": func, "help": help, "args": []}
+		c = {"func": func, "help": help, "args": [], "description": description}
 		subcommands[func.__name__] = c
 		return func
 	return _decorator
@@ -226,7 +226,7 @@ def main():
 	subparsers = parser.add_subparsers(title="The available subcommands are", metavar="<command>")
 
 	for sub in sorted(subcommands):
-		subparser = subparsers.add_parser(sub, help=subcommands[sub]["help"])
+		subparser = subparsers.add_parser(sub, help=subcommands[sub]["help"], description=subcommands[sub]["description"])
 		subcommands[sub]["parser"] = subparser
 		for args, kwargs in subcommands[sub]["args"]:
 			subparser.add_argument(*args, metavar="<"+args[0]+">", **kwargs)

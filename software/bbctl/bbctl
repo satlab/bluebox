@@ -163,18 +163,67 @@ def help(args, parser):
 	else:
 		parser.print_help()
 
+class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
+	def _format_action(self, action):
+		# determine the required width and the entry label
+		help_position = min(self._action_max_length + 2,
+							self._max_help_position)
+		help_width = self._width - help_position
+		action_width = help_position - self._current_indent - 2
+		action_header = self._format_action_invocation(action)
+
+		# ho nelp; start on same line and add a final newline
+		if not action.help:
+			tup = self._current_indent, '', action_header
+			action_header = '%*s%s\n' % tup
+
+		# short action name; start on the same line and pad two spaces
+		elif len(action_header) <= action_width:
+			tup = self._current_indent, '', action_width, action_header
+			action_header = '%*s%-*s  ' % tup
+			indent_first = 0
+
+		# long action name; start on the next line
+		else:
+			tup = self._current_indent, '', action_header
+			action_header = '%*s%s\n' % tup
+			indent_first = help_position
+
+		# collect the pieces of the action help
+		parts = [action_header] if not action.nargs == argparse.PARSER else []
+
+		# if there was help for the action, add lines of help text
+		if action.help:
+			help_text = self._expand_help(action)
+			help_lines = self._split_lines(help_text, help_width)
+			parts.append('%*s%s\n' % (indent_first, '', help_lines[0]))
+			for line in help_lines[1:]:
+				parts.append('%*s%s\n' % (help_position, '', line))
+
+		# or add a newline if the description doesn't end with one
+		elif not action_header.endswith('\n'):
+			parts.append('\n')
+
+		# if there are any sub-actions, add their help as well
+		for subaction in self._iter_indented_subactions(action):
+			parts.append(self._format_action(subaction))
+
+		# return a single string
+		return self._join_parts(parts)
+
 desc = """
-Main BlueBox satellite ground station control program. bbctl is used for
+Main BlueBox satellite ground station control program. %(prog)s is used for
 controlling frequency, bitrate, etc. of the device and to transmit and
 receive data.
 
-See 'bbctl help <command>' for more information on a specific command.
 """
 
+epilog="See '%(prog)s help <command>' for more information on a specific command."
+
 def main():
-	parser = argparse.ArgumentParser(prog="bbctl", description=desc, formatter_class=argparse.RawDescriptionHelpFormatter)
+	parser = argparse.ArgumentParser(description=desc, epilog=epilog, formatter_class=SubcommandHelpFormatter)
 	parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose output")
-	subparsers = parser.add_subparsers(help='valid subcommands', title="Available subcommands", metavar="<command>")
+	subparsers = parser.add_subparsers(title="The available subcommands are", metavar="<command>")
 
 	for sub in sorted(subcommands):
 		subparser = subparsers.add_parser(sub, help=subcommands[sub]["help"])
@@ -194,6 +243,8 @@ def main():
 
 	try:
 		bb = bluebox.Bluebox()
+	except KeyboardInterrupt:
+		sys.exit(0)
 	except Exception as e:
 		print("Failed to connect to BlueBox: {0}".format(e))
 		sys.exit(0)

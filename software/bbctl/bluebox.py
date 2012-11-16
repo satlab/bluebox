@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+import sys
 import time
 import struct
 import usb
@@ -94,8 +95,8 @@ class Bluebox(object):
 		if self.dev is None:
 			print("waiting for device ...")
 			while self.dev is None:
-				self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
 				time.sleep(0.1)
+				self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
 
 		if self.dev.is_kernel_driver_active(0) is True:
 			self.dev.detach_kernel_driver(0)

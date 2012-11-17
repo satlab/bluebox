@@ -41,7 +41,6 @@
 		Endpoint_Write_Control_Stream_LE(&conf._name, sizeof(conf._name)); \
 	}
 
-
 struct bluebox_config conf = {
 	.freq = FREQUENCY,
 	.csma_rssi = CSMA_RSSI,
@@ -59,6 +58,8 @@ struct bluebox_config conf = {
 	.do_rs = true,
 	.do_viterbi = true,
 	.callsign = CALLSIGN,
+	.training_bytes = TRAINING_BYTES,
+	.training_symbol = TRAINING_SYMBOL,
 };
 
 void setup_hardware(void)
@@ -143,7 +144,7 @@ static void do_ifbw(int direction, unsigned int vWalue)
 
 static void do_training(int direction, unsigned int vWalue)
 {
-	/* FIXME: add training bytes config */
+	rf_config_single(uint8_t, training_bytes);
 }
 
 static void do_syncword(int direction, unsigned int vWalue)
@@ -222,19 +223,14 @@ void bluebox_task(void)
 		return;
 
 	Endpoint_SelectEndpoint(OUT_EPADDR);
-	if (Endpoint_IsOUTReceived()) {
+	if (Endpoint_IsOUTReceived() && spi_tx_allowed()) {
 		if (Endpoint_IsReadWriteAllowed()) {
-			memset(&data[front], 0x55, DATA_LENGTH);
-			Endpoint_Read_Stream_LE(&data[front], DATA_LENGTH, NULL);
+			Endpoint_Read_Stream_LE(&data[front], sizeof(data[front]), NULL);
 			adf_set_tx_mode();
 			spi_tx_start();
 		}
 
 		Endpoint_ClearOUT();
-
-		/* Clear pending data in IN endpoint */
-		Endpoint_SelectEndpoint(IN_EPADDR);
-		Endpoint_AbortPendingIN();
 	}
 }
 
@@ -254,6 +250,7 @@ int main(void)
 
 	for (;;) {
 		bluebox_task();
+		spi_rx_task();
 		USB_USBTask();
 	}
 }

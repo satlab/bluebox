@@ -30,12 +30,12 @@
 #include "spi.h"
 #include "led.h"
 
-uint8_t data[NUM_BUFS][DATA_LENGTH];
-uint8_t front;
+struct data_buffer data[NUM_BUFS];
+uint8_t front = 0;
+uint8_t back  = 1;
 
-static uint16_t bytes, target;
+static volatile unsigned char spi_mode = SPI_MODE_IDLE;
 
-static volatile unsigned char spi_mode = SPI_MODE_RX;
 void spi_rx_start(void)
 {
 	spi_mode = SPI_MODE_RX;
@@ -43,8 +43,8 @@ void spi_rx_start(void)
 
 	led_on(LED_RECEIVE);
 
-	bytes = 0;
-	target = DATA_LENGTH;
+	data[front].progress = 0;
+	data[front].size = DATA_LENGTH;
 
 	spi_enable();
 	spi_enable_it();
@@ -55,7 +55,9 @@ void spi_rx_done(void)
 	spi_disable_it();
 	spi_disable();
 	swd_enable();
+
 	led_off(LED_RECEIVE);
+	spi_mode = SPI_MODE_IDLE;
 }
 
 void spi_tx_start(void)
@@ -65,8 +67,8 @@ void spi_tx_start(void)
 
 	led_on(LED_TRANSMIT);
 
-	bytes = 0;
-	target = DATA_LENGTH;
+	data[front].progress = 0;
+	data[front].training = conf.training_bytes;
 	
 	spi_enable();
 	spi_enable_it();
@@ -77,16 +79,42 @@ void spi_tx_done(void)
 	spi_disable_it();
 	spi_disable();
 	swd_enable();
+
 	led_off(LED_TRANSMIT);
+	spi_mode = SPI_MODE_IDLE;
 }
 
+bool spi_tx_allowed(void)
+{
+	bool allow = false;
+
+	swd_disable();
+
+	if (spi_mode == SPI_MODE_RX)
+		goto out;
+
+	spi_mode = SPI_MODE_TX;
+	allow = true;
+
+out:
+	return allow;
+}
+
+void spi_rx_task(void)
+{
+	if (data[back].flags & FLAG_RX_READY) {
+		Endpoint_SelectEndpoint(IN_EPADDR);
+		Endpoint_AbortPendingIN();
+		Endpoint_Write_Stream_LE(&data[back], sizeof(data[back]), NULL);
+		Endpoint_ClearIN();
+		data[back].flags &= ~FLAG_RX_READY;
+	}
+}
 
 void data_done(void)
 {
-	Endpoint_SelectEndpoint(IN_EPADDR);
-	Endpoint_AbortPendingIN();
-	Endpoint_Write_Stream_LE(&data[front], DATA_LENGTH, NULL);
-	Endpoint_ClearIN();
+	data[front].flags |= FLAG_RX_READY;
+	back = front;
 	front = !front;
 }
 
@@ -125,21 +153,9 @@ static inline uint8_t __attribute__ ((pure)) frame_cuberrs(uint8_t *cub)
 	return errs;
 }
 
-static inline __attribute__ ((pure)) int rx_rs_length(uint8_t type)
-{
-	return RS_LENGTH;
-}
-
-static inline __attribute__ ((pure)) int rx_data_length(uint8_t type)
-{
-	return CSP_OVERHEAD + ((type == SHORT_FRAME_MARKER) ? SHORT_FRAME_LIMIT : LONG_FRAME_LIMIT);
-}
-
 static inline __attribute__ ((pure)) int rx_frame_spi_length(uint8_t type)
 {
 	int bytes = CSP_OVERHEAD;
-
-	return 128;
 
 	if (type == SHORT_FRAME_MARKER)
 		bytes += conf.do_rs ? SHORT_FRAME_LIMIT + RS_LENGTH : SHORT_FRAME_LIMIT;
@@ -154,11 +170,6 @@ static inline __attribute__ ((pure)) int rx_frame_spi_length(uint8_t type)
 	return bytes;
 }
 
-static inline __attribute__ ((pure)) uint16_t training_ms_to_bytes(uint32_t ms, uint32_t bitrate)
-{
-	return (ms * bitrate) / 1000 / BITS_PER_BYTE;
-}
-
 ISR(INT6_vect)
 {
 	spi_rx_start();
@@ -166,17 +177,25 @@ ISR(INT6_vect)
 
 ISR(SPI_STC_vect)
 {
+	static uint8_t errs, type;
+
 	if (spi_mode == SPI_MODE_TX) {
-		spi_write_data(data[front][bytes++]);
-		if (bytes >= target) {
+		if (data[front].training > 0) {
+			spi_write_data(conf.training_symbol);
+			data[front].training--;
+		} else {
+			spi_write_data(data[front].data[data[front].progress++]);
+		}
+
+		if (data[front].progress >= data[front].size) {
 			spi_tx_done();
 			adf_set_rx_mode();
 		}
 	} else {
-		data[front][bytes++] = spi_read_data();
+		data[front].data[data[front].progress++] = spi_read_data();
 
-		if (bytes == FSM_POSITION) {
-			uint8_t errs = frame_cuberrs(&data[front][0]);
+		if (data[front].progress == FSM_POSITION) {
+			errs = frame_cuberrs(data[front].data);
 			if (errs > SYNC_WORD_TOLERANCE * 2) {
 				spi_rx_done();
 				return;
@@ -184,12 +203,12 @@ ISR(SPI_STC_vect)
 		}
 
 		/* Set frame length from FSM */
-		if (bytes == FSM_POSITION + 1) {
-			uint8_t type = frame_type(data[front][bytes-1]);
-			target = rx_frame_spi_length(type);
+		if (data[front].progress == FSM_POSITION + 1) {
+			type = frame_type(data[front].data[FSM_POSITION]);
+			data[front].size = rx_frame_spi_length(type);
 		}
 
-		if (bytes >= target) {
+		if (data[front].progress >= data[front].size) {
 			spi_rx_done();
 			data_done();
 			adf_set_threshold_free();

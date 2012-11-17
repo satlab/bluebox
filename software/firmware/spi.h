@@ -96,6 +96,7 @@ static inline void swd_disable(void)
 
 #define SPI_MODE_RX               0
 #define SPI_MODE_TX               1
+#define SPI_MODE_IDLE			2
 
 #define spi_enable()              (SPCR |=  (1<<SPE))
 #define spi_disable()             (SPCR &= ~(1<<SPE))
@@ -160,8 +161,10 @@ void spi_rx_done(void);
 void spi_tx_start(void);
 void spi_tx_done(void);
 int spi_tx_wait(void);
+bool spi_tx_allowed(void);
+void spi_rx_task(void);
 
-extern uint8_t data[NUM_BUFS][DATA_LENGTH];
+extern struct data_buffer data[NUM_BUFS];
 extern uint8_t front;
 
 #endif /* _SPI_H_ */

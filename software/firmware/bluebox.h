@@ -71,6 +71,8 @@
 #define SYNC_WORD		0x4f5a33
 #define SYNC_WORD_TOLERANCE	ADF_SYNC_WORD_ERROR_TOLERANCE_1
 #define SYNC_WORD_BITS		ADF_SYNC_WORD_LEN_24
+#define TRAINING_SYMBOL		0x55
+#define TRAINING_BYTES		16
 
 /* AAUSAT3 packet format */
 #define CALLSIGN		"OZ3CUB"
@@ -83,17 +85,27 @@
 #define FSM_LENGTH		1
 #define SHORT_FRAME_LIMIT	25
 #define LONG_FRAME_LIMIT	86
-#define RS_BLOCK_LENGTH		255
 #define RS_LENGTH		32
 #define VITERBI_RATE		2
-#define VITERBI_CONSTRAINT	7
 #define VITERBI_TAIL		1
-#define CSP_OVERHEAD		8
+#define CSP_OVERHEAD		6
 #define BITS_PER_BYTE		8
 
 /* Buffer configuration */
-#define DATA_LENGTH	256
-#define NUM_BUFS	2
+#define TOTAL_LENGTH		512
+#define DATA_LENGTH		(TOTAL_LENGTH - sizeof(uint16_t) - sizeof(uint16_t) - sizeof(uint8_t) - sizeof(uint8_t))
+#define NUM_BUFS		2
+
+/* This must be 512 bytes */
+struct data_buffer {
+	uint16_t size;
+	uint16_t progress;
+	uint8_t flags;
+	uint8_t training;
+	uint8_t data[DATA_LENGTH];
+};
+
+#define FLAG_RX_READY		(1 << 0)
 
 struct bluebox_config {
 	uint32_t freq;
@@ -111,6 +123,8 @@ struct bluebox_config {
 	uint8_t swlen;
 	uint8_t do_rs;
 	uint8_t do_viterbi;
+	uint8_t training_symbol;
+	uint8_t training_bytes;
 	char callsign[CALLSIGN_LENGTH];
 };
 

@@ -13,7 +13,7 @@
 /* Power LED pins */
 #define PORT_LED_POWER		PORTF
 #define DIR_LED_POWER		DDRF
-#define PIN_LED_POWER		0
+#define PIN_LED_POWER		4
 
 /* Receive LED pins */
 #define PORT_LED_RECEIVE	PORTF
@@ -23,7 +23,7 @@
 /* Transmit LED pins */
 #define PORT_LED_TRANSMIT	PORTF
 #define DIR_LED_TRANSMIT	DDRF
-#define PIN_LED_TRANSMIT	4
+#define PIN_LED_TRANSMIT	0
 
 static inline void led_on(unsigned int leds)
 {

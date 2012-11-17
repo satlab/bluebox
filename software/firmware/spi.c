@@ -187,7 +187,7 @@ ISR(SPI_STC_vect)
 			spi_write_data(data[front].data[data[front].progress++]);
 		}
 
-		if (data[front].progress >= data[front].size) {
+		if (data[front].progress > data[front].size) {
 			spi_tx_done();
 			adf_set_rx_mode();
 		}
@@ -198,6 +198,7 @@ ISR(SPI_STC_vect)
 			errs = frame_cuberrs(data[front].data);
 			if (errs > SYNC_WORD_TOLERANCE * 2) {
 				spi_rx_done();
+				adf_set_threshold_free();
 				return;
 			}
 		}

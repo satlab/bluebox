@@ -77,7 +77,10 @@ def signal(args, bb):
 
 			sys.stdout.write("\r{0} {1} dBm ".format(bar, rssi))
 			sys.stdout.flush()
-			time.sleep(0.5)
+			time.sleep(0.1)
+		except KeyboardInterrupt:
+			print()
+			sys.exit(0)
 		except Exception as e:
 			print(e)
 			break
@@ -89,7 +92,7 @@ def receive(args, bb):
 		data = bb.receive()
 		if data is None:
 			break
-		print("Recv ({0}) {1:.2f}s '{2}'".format(len(data), time.time() - last, ''.join(["{0:02x}".format(x) for x in data])))
+		print("Recv ({0}) {1:.2f}s '{2}'".format(len(data), time.time() - last, ''.join(["{0:02x}".format(ord(x)) for x in data])))
 		last = time.time()
 
 @argument('packet', help="packet hex string to transmit")
@@ -98,7 +101,7 @@ def transmit(args, bb):
 	bytes = args.packet.decode("hex")
 	bb.transmit(bytes)
 
-@argument('mode', type=int, help="testmode type")
+@argument('mode', help="testmode type")
 @subcommand("put device in test mode")
 def testmode(args, bb):
 	if args.mode == "carrier":
@@ -155,6 +158,14 @@ def modindex(args, bb):
 	else:
 		print(bb.get_modindex())
 
+@argument('length', type=int, help="training sequence length in bytes", nargs="?", default=None)
+@subcommand("get or set device training sequence")
+def training(args, bb):
+	if args.length is not None:
+		bb.set_training(args.length)
+	else:
+		print(bb.get_training())
+
 @argument('command', help="detailed help command", nargs="?", default=None)
 @subcommand("show detailed help for subcommand")
 def help(args, parser):
@@ -165,51 +176,10 @@ def help(args, parser):
 
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
-		# determine the required width and the entry label
-		help_position = min(self._action_max_length + 2,
-							self._max_help_position)
-		help_width = self._width - help_position
-		action_width = help_position - self._current_indent - 2
-		action_header = self._format_action_invocation(action)
-
-		# ho nelp; start on same line and add a final newline
-		if not action.help:
-			tup = self._current_indent, '', action_header
-			action_header = '%*s%s\n' % tup
-
-		# short action name; start on the same line and pad two spaces
-		elif len(action_header) <= action_width:
-			tup = self._current_indent, '', action_width, action_header
-			action_header = '%*s%-*s  ' % tup
-			indent_first = 0
-
-		# long action name; start on the next line
-		else:
-			tup = self._current_indent, '', action_header
-			action_header = '%*s%s\n' % tup
-			indent_first = help_position
-
-		# collect the pieces of the action help
-		parts = [action_header] if not action.nargs == argparse.PARSER else []
-
-		# if there was help for the action, add lines of help text
-		if action.help:
-			help_text = self._expand_help(action)
-			help_lines = self._split_lines(help_text, help_width)
-			parts.append('%*s%s\n' % (indent_first, '', help_lines[0]))
-			for line in help_lines[1:]:
-				parts.append('%*s%s\n' % (help_position, '', line))
-
-		# or add a newline if the description doesn't end with one
-		elif not action_header.endswith('\n'):
-			parts.append('\n')
-
-		# if there are any sub-actions, add their help as well
-		for subaction in self._iter_indented_subactions(action):
-			parts.append(self._format_action(subaction))
-
-		# return a single string
-		return self._join_parts(parts)
+		parts = super(argparse.RawDescriptionHelpFormatter, self)._format_action(action)
+		if action.nargs == argparse.PARSER:
+			parts = "\n".join(parts.split("\n")[1:])
+		return parts
 
 desc = """
 Main BlueBox satellite ground station control program. %(prog)s is used for
@@ -245,6 +215,7 @@ def main():
 	try:
 		bb = bluebox.Bluebox()
 	except KeyboardInterrupt:
+		print()
 		sys.exit(0)
 	except Exception as e:
 		print("Failed to connect to BlueBox: {0}".format(e))
@@ -258,6 +229,8 @@ def main():
 		args.func(args, bb)
 	except Exception as e:
 		print("Error: {0}".format(str(e)))
+	except KeyboardInterrupt:
+		print()
 	sys.exit(0)
 
 if __name__ == "__main__":

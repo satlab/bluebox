@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 import sys
+import errno
 import time
 import struct
 import usb
@@ -89,6 +90,11 @@ class Bluebox(object):
 	SW_TOLERANCE_1BER	= 1
 	SW_TOLERANCE_2BER	= 2
 	SW_TOLERANCE_3BER	= 3
+
+	# Data length and format
+	DATALEN 		= 506
+	DATAEPSIZE		= 512
+	DATAFMT			= "<HHH{0}s".format(DATALEN)
 	
 	def __init__(self):
 		self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
@@ -166,14 +172,24 @@ class Bluebox(object):
 	def syncword(self, word, tol):
 		pass
 
-	def training(self, startbytes, interbytes):
-		pass
+	def set_training(self, training):
+		training = struct.pack("<B", training)
+		self._ctrl_write(self.REQUEST_TRAINING, training)
 
-	def training_ms(self, startms, interms):
+	def get_training(self):
+		training = self._ctrl_read(self.REQUEST_TRAINING, 1)
+		training = struct.unpack("<B", training)[0]
+		return training
+
+	def set_training_ms(self, ms):
 		bitrate = self.get_bitrate()
-		startbytes = (startms * bitrate) / 1000 / 8
-		interbytes = (interms * bitrate) / 1000 / 8
-		self.training(startbytes, interbytes)
+		trainbytes = (ms * bitrate) / 1000 / 8
+		self.training(trainbytes)
+	
+	def get_training_ms(self):
+		bitrate = self.get_bitrate()
+		trainbytes = self.get_training()
+		return (trainbytes * 8 * 1000) / bitrate
 
 	def version(self):
 		return self.reg_read(self.READBACK_VERSION)
@@ -199,16 +215,20 @@ class Bluebox(object):
 		try: self._ctrl_write(self.REQUEST_BOOTLOADER, None, 0)
 		except: pass
 
-	def transmit(self, text):
-		self.dev.write(self.DATA_OUT, text, timeout=1000)
+	def transmit(self, text, timeout=10000):
+		if len(text) > self.DATALEN:
+			raise Exception("Data too long")
+		data = struct.pack(self.DATAFMT, len(text), 0, 0, text)
+		self.dev.write(self.DATA_OUT, data, timeout=timeout)
 
 	def receive(self):
 		ret = None
 		while ret is None:
 			try:
-				ret = self.dev.read(self.DATA_IN, 256, 0, timeout=1000)
-			except usb.core.USBError:
-				pass
-			except:
-				break
-		return ret
+				ret = self.dev.read(self.DATA_IN, self.DATAEPSIZE, 0, timeout=1000)
+				size, progress, flags, data = struct.unpack(self.DATAFMT, ret)
+				data = data[0:size]
+			except usb.core.USBError as e:
+				if e.errno != errno.ETIMEDOUT:
+					raise
+		return data

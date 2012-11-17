@@ -29,16 +29,29 @@ import argparse
 import bluebox
 
 subcommands = {}
-def subcommand(help="", description=""):
+def subcommand(*args, **kwargs):
 	def _decorator(func):
-		c = {"func": func, "help": help, "args": [], "description": description}
-		subcommands[func.__name__] = c
+		nargs = list(args)
+		help = nargs[0]
+		nargs[0] = func.__name__
+		kwargs["help"] = help
+		_option = (nargs, kwargs)
+		if not subcommands.has_key(func.__name__):
+			subcommands[func.__name__] = {}
+		subcommands[func.__name__]["sub"] = _option
+		subcommands[func.__name__]["func"] = func
+		if not subcommands[func.__name__].has_key("args"):
+			subcommands[func.__name__]["args"] = []
 		return func
 	return _decorator
 
 def argument(*args, **kwargs):
 	def _decorator(func):
 		_option = (args, kwargs)
+		if not subcommands.has_key(func.__name__):
+			subcommands[func.__name__] = {}
+		if not subcommands[func.__name__].has_key("args"):
+			subcommands[func.__name__]["args"] = []
 		subcommands[func.__name__]["args"].append(_option)
 		return func
 	return _decorator
@@ -95,14 +108,19 @@ def receive(args, bb):
 		print("Recv ({0}) {1:.2f}s '{2}'".format(len(data), time.time() - last, ''.join(["{0:02x}".format(ord(x)) for x in data])))
 		last = time.time()
 
-@argument('packet', help="packet hex string to transmit")
 @subcommand("transmit packet data")
+@argument('packet', help="packet hex string to transmit")
+@argument('-r', '--wait-reply', dest="wait_reply", help="wait for reply", action='store_true', default=False)
 def transmit(args, bb):
 	bytes = args.packet.decode("hex")
 	bb.transmit(bytes)
+	if args.wait_reply:
+		data = bb.receive()
+		print("Recv ({0}) '{1}'".format(len(data), ''.join(["{0:02x}".format(ord(x)) for x in data])))
 
-@argument('mode', help="testmode type")
 @subcommand("put device in test mode")
+@argument('mode', help="testmode type", choices=("carrier", "high", "low", "pn9", "1010", "syncword", "off"))
+@argument('-l', '--limit', type=int, metavar="seconds", help="stop after limit seconds")
 def testmode(args, bb):
 	if args.mode == "carrier":
 		bb.testmode(bb.TESTMODE_OFF)
@@ -126,6 +144,11 @@ def testmode(args, bb):
 		bb.testmode(bb.TESTMODE_OFF)
 		bb.rx_mode()
 
+	if args.mode != "off" and args.limit is not None:
+		time.sleep(args.limit)
+		bb.testmode(bb.TESTMODE_OFF)
+		bb.rx_mode()
+
 @subcommand("set device in transmit mode")
 def txmode(args, bb):
 	bb.tx_mode()
@@ -134,40 +157,52 @@ def txmode(args, bb):
 def rxmode(args, bb):
 	bb.rx_mode()
 
-@argument('frequency', type=int, help="requested frequency", nargs="?", default=None)
 @subcommand("get or set device frequency")
+@argument('frequency', type=int, help="requested frequency", nargs="?", default=None)
 def frequency(args, bb):
 	if args.frequency is not None:
 		bb.set_frequency(args.frequency)
 	else:
 		print(bb.get_frequency())
 
-@argument('bitrate', type=int, help="requested bitrate", nargs="?", default=None)
 @subcommand("get or set device bitrate")
+@argument('bitrate', type=int, help="requested bitrate", nargs="?", default=None)
 def bitrate(args, bb):
 	if args.bitrate is not None:
 		bb.set_bitrate(args.bitrate)
 	else:
 		print(bb.get_bitrate())
 
-@argument('modindex', type=int, help="requested modulation index", nargs="?", default=None)
 @subcommand("get or set device modulation index")
+@argument('modindex', type=int, help="requested modulation index", nargs="?", default=None)
 def modindex(args, bb):
 	if args.modindex is not None:
 		bb.set_modindex(args.modindex)
 	else:
 		print(bb.get_modindex())
 
-@argument('length', type=int, help="training sequence length in bytes", nargs="?", default=None)
 @subcommand("get or set device training sequence")
+@argument('length', type=int, help="training sequence length in bytes", nargs="?", default=None)
 def training(args, bb):
 	if args.length is not None:
 		bb.set_training(args.length)
 	else:
 		print(bb.get_training())
 
-@argument('command', help="detailed help command", nargs="?", default=None)
+@subcommand("show current configuration")
+def config(args, bb):
+	frequency = bb.get_frequency()
+	modindex  = bb.get_modindex()
+	training  = bb.get_training()
+	bitrate   = bb.get_bitrate();
+
+	print("Frequency:        {0} Hz".format(frequency))
+	print("Modulation Index: {0}".format(modindex))
+	print("Bitrate:          {0} bps".format(bitrate))
+	print("Training bytes:   {0} bytes".format(training))
+
 @subcommand("show detailed help for subcommand")
+@argument('command', help="detailed help command", nargs="?", default=None)
 def help(args, parser):
 	if args.command is not None:
 		subcommands[args.command]["parser"].print_help()
@@ -196,15 +231,22 @@ def main():
 	subparsers = parser.add_subparsers(title="The available subcommands are", metavar="<command>")
 
 	for sub in sorted(subcommands):
-		subparser = subparsers.add_parser(sub, help=subcommands[sub]["help"], description=subcommands[sub]["description"])
+		args, kwargs = subcommands[sub]["sub"]
+		subparser = subparsers.add_parser(*args, **kwargs)
 		subcommands[sub]["parser"] = subparser
 		for args, kwargs in subcommands[sub]["args"]:
 			arg = args[0] if kwargs.get("nargs", "") == "?" else "<" + args[0] + ">"
-			subparser.add_argument(*args, metavar=arg, **kwargs)
+			if not args[0].startswith("-"):
+				kwargs["metavar"] = kwargs.get("metavar", arg)
+			subparser.add_argument(*args, **kwargs)
 		subparser.set_defaults(func=subcommands[sub]["func"])
 
 	if len(sys.argv) < 2:
 		parser.print_help()
+		sys.exit(1)
+
+	if not sys.argv[1] in subcommands:
+		print("{0}: '{1}' is not a {0} command. See '{0} --help'.".format(parser.prog, sys.argv[1]))
 		sys.exit(1)
 
 	args = parser.parse_args()

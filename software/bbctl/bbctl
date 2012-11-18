@@ -27,6 +27,7 @@ import time
 import os.path
 import argparse
 import bluebox
+import fec
 
 subcommands = {}
 def subcommand(*args, **kwargs):
@@ -99,20 +100,28 @@ def signal(args, bb):
 			break
 
 @subcommand("receive packets and print to screen")
+@argument('-d', '--decode', dest="decode", help="decode packets", action='store_true', default=False)
 def receive(args, bb):
 	last = time.time()
 	while True:
 		data = bb.receive()
 		if data is None:
 			break
+		if args.decode:
+			ph = fec.PacketHandler()
+			data = ph.deframe(data)
 		print("Recv ({0}) {1:.2f}s '{2}'".format(len(data), time.time() - last, ''.join(["{0:02x}".format(ord(x)) for x in data])))
 		last = time.time()
 
 @subcommand("transmit packet data")
 @argument('packet', help="packet hex string to transmit")
 @argument('-r', '--wait-reply', dest="wait_reply", help="wait for reply", action='store_true', default=False)
+@argument('-e', '--encode', dest="encode", help="encode packets", action='store_true', default=False)
 def transmit(args, bb):
 	bytes = args.packet.decode("hex")
+	if args.encode:
+		ph = fec.PacketHandler()
+		bytes = ph.frame(bytes)
 	bb.transmit(bytes)
 	if args.wait_reply:
 		data = bb.receive()
@@ -228,6 +237,7 @@ epilog="See '%(prog)s help <command>' for more information on a specific command
 def main():
 	parser = argparse.ArgumentParser(description=desc, epilog=epilog, formatter_class=SubcommandHelpFormatter)
 	parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose output")
+	parser.add_argument("-w", "--wait", action="store_true", help="wait for device if not connected")
 	subparsers = parser.add_subparsers(title="The available subcommands are", metavar="<command>")
 
 	for sub in sorted(subcommands):
@@ -245,7 +255,7 @@ def main():
 		parser.print_help()
 		sys.exit(1)
 
-	if not sys.argv[1] in subcommands:
+	if not sys.argv[1].startswith("-") and not sys.argv[1] in subcommands:
 		print("{0}: '{1}' is not a {0} command. See '{0} --help'.".format(parser.prog, sys.argv[1]))
 		sys.exit(1)
 
@@ -255,7 +265,7 @@ def main():
 		sys.exit(0)
 
 	try:
-		bb = bluebox.Bluebox()
+		bb = bluebox.Bluebox(wait=args.wait)
 	except KeyboardInterrupt:
 		print()
 		sys.exit(0)

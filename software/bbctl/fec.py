@@ -19,11 +19,11 @@
 # THE SOFTWARE.
 
 import os
+import sys
 import struct
+import hashlib
+import hmac
 import ctypes
-
-path = os.path.dirname(os.path.realpath(__file__))
-bbfec = ctypes.CDLL(path + "/fec/bbfec.so", use_errno=True)
 
 VITERBI_RATE       = 2
 VITERBI_TAIL       = 1
@@ -36,6 +36,16 @@ RS_LENGTH          = 32
 RS_BLOCK_LENGTH    = 255
 
 HMAC_LENGTH        = 2
+HMAC_KEY_LENGTH    = 16
+SIZE_LENGTH        = 2
+
+CSP_OVERHEAD       = 4
+
+SHORT_FRAME_LIMIT  = 25
+LONG_FRAME_LIMIT   = 86
+
+path = os.path.dirname(os.path.realpath(__file__))
+bbfec = ctypes.CDLL(path + "/fec/bbfec.so", use_errno=True)
 
 # viterbi
 bbfec.create_viterbi.argtypes = [ctypes.c_int16]
@@ -74,7 +84,7 @@ TESTDATA = "8c1a48c0043fab4d3e790e2274af0a479c013770a2f889df13fefd825417b794470f
 
 TESTDATA_IN = "000100014e90003ed60000000000000000000000000000000000000000".decode("hex")
 
-class ErrorCorrector():
+class PacketHandler():
 	def __init__(self):
 		self.ccsds_sequence = ctypes.create_string_buffer(MAX_FEC_LENGTH)
 
@@ -82,20 +92,33 @@ class ErrorCorrector():
 
 		self.vp = bbfec.create_viterbi(MAX_FEC_LENGTH * BITS_PER_BYTE)
 
-	def hmac_append(self, data):
-		size = struct.unpack(">H", data[:2])[0]
-		size += HMAC_LENGTH
-		hmac = struct.pack("<H", 0)
-		data = struct.pack(">H", size) + data[2:] + hmac
-		return data
+	def tx_frame_length(self, data):
+		return SIZE_LENGTH + CSP_OVERHEAD + (SHORT_FRAME_LIMIT if data <= SHORT_FRAME_LIMIT else LONG_FRAME_LIMIT)
 
-	def hmac_verify(self, data):
-		size = struct.unpack(">H", data[:2])[0]
-		size -= HMAC_LENGTH
-		data = struct.pack(">H", size) + data[2:-2]
-		return data
+	def rx_frame_length(self):
+		return SHORT_FRAME_LIMIT # FIXMEFIXMEFIXME
 
-	def deframe(self, data, viterbi=True, rs=True, randomize=True):
+	def hmac_append(self, data, key):
+		size = len(data) - CSP_OVERHEAD + HMAC_LENGTH
+		
+		key = hashlib.sha1(key).digest()[:HMAC_KEY_LENGTH]
+		hmkey = hmac.new(key, data[:CSP_OVERHEAD+size], hashlib.sha1).digest()[:HMAC_LENGTH]
+
+		return data + hmkey
+
+	def hmac_verify(self, data, key):
+		size = len(data) - CSP_OVERHEAD - HMAC_LENGTH
+
+		key = hashlib.sha1(key).digest()[:HMAC_KEY_LENGTH]
+		hmkey = hmac.new(key, data[:CSP_OVERHEAD+size], hashlib.sha1).digest()[:HMAC_LENGTH]
+		hmpkg = data[CSP_OVERHEAD+size:CSP_OVERHEAD+size+HMAC_LENGTH]
+
+		if hmkey != hmpkg:
+			raise Exception("HMAC does not match expected value!")
+		
+		return data[:CSP_OVERHEAD+size]
+
+	def decode(self, data, viterbi=True, rs=True, randomize=True):
 		rx_length = len(data)
 		data_mutable = ctypes.create_string_buffer(data)
 
@@ -109,14 +132,17 @@ class ErrorCorrector():
 			bbfec.ccsds_xor_sequence(data_mutable, self.ccsds_sequence, rx_length)
 
 		if rs:
-			pad = RS_BLOCK_LENGTH - RS_LENGTH - 25
+			pad = RS_BLOCK_LENGTH - RS_LENGTH - self.rx_frame_length()
 			byte_corr = bbfec.decode_rs_8(data_mutable, None, 0, RS_LENGTH, pad)
 			rx_length = rx_length - RS_LENGTH
-		
-		return data_mutable[0:rx_length]
 
-	def frame(self, data, viterbi=True, rs=True, randomize=True):
-		tx_length = len(data)
+		size = struct.unpack(">H", data_mutable[:SIZE_LENGTH])[0]
+		
+		return data_mutable[SIZE_LENGTH:SIZE_LENGTH+CSP_OVERHEAD+size]
+
+	def encode(self, data, viterbi=True, rs=True, randomize=True):
+		tx_length = self.tx_frame_length(len(data))
+		data = struct.pack(">H", len(data) - CSP_OVERHEAD) + data
 		data_mutable = ctypes.create_string_buffer(data, MAX_FEC_LENGTH)
 
 		if rs:
@@ -133,11 +159,20 @@ class ErrorCorrector():
 		
 		return data_mutable[0:tx_length]
 
+	def deframe(self, data, viterbi=True, rs=True, randomize=True, key=None):
+		data = self.decode(data, viterbi, rs, randomize)
+		data = self.hmac_verify(data, key)
+		return data
+
+	def frame(self, data, viterbi=True, rs=True, randomize=True, key=None):
+		data = self.hmac_append(data, key)
+		data = self.encode(data, viterbi, rs, randomize)
+		return data
+
 if __name__ == "__main__":
-	ec = ErrorCorrector()
+	key = sys.argv[1]
+	ec = PacketHandler()
 	print(TESTDATA.encode("hex"))
-	data = ec.deframe(TESTDATA)
-	data = ec.hmac_verify(data)
-	data = ec.hmac_append(data)
-	data = ec.frame(data)
+	data = ec.deframe(TESTDATA, key=key)
+	data = ec.frame(data, key=key)
 	print(data.encode("hex"))

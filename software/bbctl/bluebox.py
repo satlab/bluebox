@@ -96,9 +96,11 @@ class Bluebox(object):
 	DATAEPSIZE		= 512
 	DATAFMT			= "<HHH{0}s".format(DATALEN)
 	
-	def __init__(self):
+	def __init__(self, wait=False):
 		self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
 		if self.dev is None:
+			if not wait:
+				raise Exception("Device not found")
 			print("waiting for device ...")
 			while self.dev is None:
 				time.sleep(0.1)

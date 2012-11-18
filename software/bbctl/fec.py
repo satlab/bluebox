@@ -92,6 +92,17 @@ class PacketHandler():
 
 		self.vp = bbfec.create_viterbi(MAX_FEC_LENGTH * BITS_PER_BYTE)
 
+	def hexdump(self, src, length=16):
+		filt = "".join([(len(repr(chr(x)))==3) and chr(x) or "." for x in range(256)])
+		offset = 0; result=""
+		while src:
+			s, src = src[:length],src[length:]
+			hexa = ' '.join(["{0:02X}".format(ord(x)) for x in s])
+			s = s.translate(filt)
+			result += "{0:08X}   {1:{width}}   {2}\n".format(offset, hexa, s, width=length*3)
+			offset += length
+		return result[:-1]
+
 	def tx_frame_length(self, data):
 		return SIZE_LENGTH + CSP_OVERHEAD + (SHORT_FRAME_LIMIT if data <= SHORT_FRAME_LIMIT else LONG_FRAME_LIMIT)
 
@@ -172,7 +183,7 @@ class PacketHandler():
 if __name__ == "__main__":
 	key = sys.argv[1]
 	ec = PacketHandler()
-	print(TESTDATA.encode("hex"))
+	print("Original data:\n{0}\n".format(ec.hexdump(TESTDATA)))
 	data = ec.deframe(TESTDATA, key=key)
 	data = ec.frame(data, key=key)
-	print(data.encode("hex"))
+	print("Decoded data:\n{0}".format(ec.hexdump(data)))

@@ -19,6 +19,7 @@
 # THE SOFTWARE.
 
 import sys
+import platform
 import errno
 import time
 import struct
@@ -106,7 +107,7 @@ class Bluebox(object):
 				time.sleep(0.1)
 				self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
 
-		if self.dev.is_kernel_driver_active(0) is True:
+		if platform.system() != "Windows" and  self.dev.is_kernel_driver_active(0) is True:
 			self.dev.detach_kernel_driver(0)
 
 		self.dev.set_configuration()

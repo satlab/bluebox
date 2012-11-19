@@ -33,6 +33,8 @@
 #include "adf7021.h"
 #include "config.h"
 #include "bluebox.h"
+#include "ptt.h"
+#include "led.h"
 
 static adf_conf_t rx_conf, tx_conf;
 static adf_sysconf_t sys_conf;
@@ -333,7 +335,7 @@ void adf_init_tx_mode(unsigned int data_rate, uint8_t mod_index, unsigned long f
 	tx_conf.r2.tx_frequency_deviation = tx_conf.real.freq_dev;
 
 	/* Set PA and modulation type */
-	tx_conf.r2.power_amplifier = PA_SETTING;    // 0 = OFF, 63 = MAX (WARNING NON LINEAR)
+	tx_conf.r2.power_amplifier = conf.pa_setting;    // 0 = OFF, 63 = MAX (WARNING NON LINEAR)
 	tx_conf.r2.pa_bias = 3;	            // 0 = 5uA, 1 = 7uA, 2 = 9uA, 3 = 11 uA
 	tx_conf.r2.pa_ramp = 7;	            // 0 = OFF, 1 = LOWEST, 7 = HIGHEST
 	tx_conf.r2.pa_enable = 1;           // 0 = OFF, 1 = ON
@@ -407,6 +409,9 @@ void adf_set_rx_mode(void)
 		adf_write_reg(&rx_conf.r4_reg);
 	}
 
+	ptt_low();
+	led_off(LED_TRANSMIT);
+
 	adf_state = ADF_RX;
 }
 
@@ -417,6 +422,9 @@ void adf_set_tx_mode(void)
 		adf_write_reg(&tx_conf.r2_reg);
 		adf_pa_state = ADF_PA_ON;
 	}
+
+	ptt_high();
+	led_on(LED_TRANSMIT);
 
 	if (adf_state == ADF_RX) {
 		if (rx_conf.r3_reg.whole_reg != tx_conf.r3_reg.whole_reg)

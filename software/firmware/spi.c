@@ -132,8 +132,6 @@ void spi_tx_start(void)
 	strncpy(preamble, conf.callsign, CALLSIGN_LENGTH);
 	preamble[CALLSIGN_LENGTH] = tx_frame_fsm(data[front].size);
 
-	led_on(LED_TRANSMIT);
-
 	data[front].progress = 0;
 	data[front].training = conf.training_bytes;
 	
@@ -147,7 +145,6 @@ void spi_tx_done(void)
 	spi_disable();
 	swd_enable();
 
-	led_off(LED_TRANSMIT);
 	spi_mode = SPI_MODE_IDLE;
 }
 

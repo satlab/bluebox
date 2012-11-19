@@ -30,6 +30,7 @@
 #include "bootloader.h"
 #include "spi.h"
 #include "led.h"
+#include "ptt.h"
 
 #define rf_config_single(_type, _name) 						\
 	_type _name; 								\
@@ -69,6 +70,7 @@ void setup_hardware(void)
 
 	clock_prescale_set(clock_div_1);
 
+	ptt_init();
 	USB_Init();
 	led_init();
 

@@ -9,3 +9,4 @@
 *.map
 *.sym
 *.pyc
+*.so

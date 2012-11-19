@@ -82,15 +82,18 @@ bbfec.ccsds_xor_sequence.restype = None
 
 TESTDATA = "8c1a48c0043fab4d3e790e2274af0a479c013770a2f889df13fefd825417b794470f240399b8562a8316f576861d7e72cf74bb29fcc0b6d6a5ce3659e8ee4d412bf95b7040459400ff3528f7f792c5f70c95eaf2574767eab615e26df977fc5ee837eda2eca7c601f4d568c9eca9d6f8ef015f67b98a79b2d8092fd60d2cee25".decode("hex")
 
-TESTDATA_IN = "000100014e90003ed60000000000000000000000000000000000000000".decode("hex")
-
 class PacketHandler():
-	def __init__(self):
+	def __init__(self, key, viterbi=True, rs=True, randomize=True):
 		self.ccsds_sequence = ctypes.create_string_buffer(MAX_FEC_LENGTH)
 
 		bbfec.ccsds_generate_sequence(self.ccsds_sequence, MAX_FEC_LENGTH)
 
 		self.vp = bbfec.create_viterbi(MAX_FEC_LENGTH * BITS_PER_BYTE)
+
+		self.key = hashlib.sha1(key).digest()[:HMAC_KEY_LENGTH]
+		self.viterbi = viterbi
+		self.rs = rs
+		self.randomize = randomize
 
 	def hexdump(self, src, length=16):
 		filt = "".join([(len(repr(chr(x)))==3) and chr(x) or "." for x in range(256)])
@@ -104,24 +107,19 @@ class PacketHandler():
 		return result[:-1]
 
 	def tx_frame_length(self, data):
-		return SIZE_LENGTH + CSP_OVERHEAD + (SHORT_FRAME_LIMIT if data <= SHORT_FRAME_LIMIT else LONG_FRAME_LIMIT)
+		return SIZE_LENGTH + CSP_OVERHEAD + (SHORT_FRAME_LIMIT if (data - CSP_OVERHEAD) <= SHORT_FRAME_LIMIT else LONG_FRAME_LIMIT)
 
-	def rx_frame_length(self):
-		return SHORT_FRAME_LIMIT # FIXMEFIXMEFIXME
-
-	def hmac_append(self, data, key):
+	def hmac_append(self, data):
 		size = len(data) - CSP_OVERHEAD + HMAC_LENGTH
 		
-		key = hashlib.sha1(key).digest()[:HMAC_KEY_LENGTH]
-		hmkey = hmac.new(key, data[:CSP_OVERHEAD+size], hashlib.sha1).digest()[:HMAC_LENGTH]
+		hmkey = hmac.new(self.key, data[:CSP_OVERHEAD+size], hashlib.sha1).digest()[:HMAC_LENGTH]
 
 		return data + hmkey
 
-	def hmac_verify(self, data, key):
+	def hmac_verify(self, data):
 		size = len(data) - CSP_OVERHEAD - HMAC_LENGTH
 
-		key = hashlib.sha1(key).digest()[:HMAC_KEY_LENGTH]
-		hmkey = hmac.new(key, data[:CSP_OVERHEAD+size], hashlib.sha1).digest()[:HMAC_LENGTH]
+		hmkey = hmac.new(self.key, data[:CSP_OVERHEAD+size], hashlib.sha1).digest()[:HMAC_LENGTH]
 		hmpkg = data[CSP_OVERHEAD+size:CSP_OVERHEAD+size+HMAC_LENGTH]
 
 		if hmkey != hmpkg:
@@ -129,61 +127,64 @@ class PacketHandler():
 		
 		return data[:CSP_OVERHEAD+size]
 
-	def decode(self, data, viterbi=True, rs=True, randomize=True):
+	def decode(self, data):
 		rx_length = len(data)
 		data_mutable = ctypes.create_string_buffer(data)
+		bit_corr = 0
+		byte_corr = 0
 
-		if viterbi:
+		if self.viterbi:
 			rx_length = (rx_length / VITERBI_RATE) - VITERBI_TAIL
 			bbfec.init_viterbi(self.vp, 0)
 			bbfec.update_viterbi(self.vp, data_mutable, (rx_length * BITS_PER_BYTE) + (VITERBI_CONSTRAINT - 1))
 			bit_corr = bbfec.chainback_viterbi(self.vp, data_mutable, (rx_length * BITS_PER_BYTE), 0)
 
-		if randomize:
+		if self.randomize:
 			bbfec.ccsds_xor_sequence(data_mutable, self.ccsds_sequence, rx_length)
 
-		if rs:
-			pad = RS_BLOCK_LENGTH - RS_LENGTH - self.rx_frame_length()
+		if self.rs:
+			pad = RS_BLOCK_LENGTH - RS_LENGTH - (rx_length - RS_LENGTH)
 			byte_corr = bbfec.decode_rs_8(data_mutable, None, 0, RS_LENGTH, pad)
 			rx_length = rx_length - RS_LENGTH
 
 		size = struct.unpack(">H", data_mutable[:SIZE_LENGTH])[0]
 		
-		return data_mutable[SIZE_LENGTH:SIZE_LENGTH+CSP_OVERHEAD+size]
+		return data_mutable[SIZE_LENGTH:SIZE_LENGTH+CSP_OVERHEAD+size], bit_corr, byte_corr
 
-	def encode(self, data, viterbi=True, rs=True, randomize=True):
+	def encode(self, data):
 		tx_length = self.tx_frame_length(len(data))
 		data = struct.pack(">H", len(data) - CSP_OVERHEAD) + data
 		data_mutable = ctypes.create_string_buffer(data, MAX_FEC_LENGTH)
 
-		if rs:
+		if self.rs:
 			pad = RS_BLOCK_LENGTH - RS_LENGTH - tx_length
 			bbfec.encode_rs_8(data_mutable, ctypes.cast(ctypes.byref(data_mutable, tx_length), ctypes.POINTER(ctypes.c_char)), RS_LENGTH, pad)
 			tx_length += RS_LENGTH
 		
-		if randomize:
+		if self.randomize:
 			bbfec.ccsds_xor_sequence(data_mutable, self.ccsds_sequence, tx_length)
 		
-		if viterbi:
+		if self.viterbi:
 			bbfec.encode_viterbi(data_mutable, data_mutable, tx_length * BITS_PER_BYTE);
 			tx_length = (tx_length + VITERBI_TAIL) * VITERBI_RATE;	
 		
 		return data_mutable[0:tx_length]
 
-	def deframe(self, data, viterbi=True, rs=True, randomize=True, key=None):
-		data = self.decode(data, viterbi, rs, randomize)
-		data = self.hmac_verify(data, key)
-		return data
+	def deframe(self, data):
+		data, bit_corr, byte_corr = self.decode(data)
+		data = self.hmac_verify(data)
+		return data, bit_corr, byte_corr
 
-	def frame(self, data, viterbi=True, rs=True, randomize=True, key=None):
-		data = self.hmac_append(data, key)
-		data = self.encode(data, viterbi, rs, randomize)
+	def frame(self, data):
+		data = self.hmac_append(data)
+		data = self.encode(data)
 		return data
 
 if __name__ == "__main__":
 	key = sys.argv[1]
-	ec = PacketHandler()
+	ec = PacketHandler(key)
 	print("Original data:\n{0}\n".format(ec.hexdump(TESTDATA)))
-	data = ec.deframe(TESTDATA, key=key)
-	data = ec.frame(data, key=key)
-	print("Decoded data:\n{0}".format(ec.hexdump(data)))
+	data, bit_corr, byte_corr = ec.deframe(TESTDATA)
+	print("Decoded data:({0},{1})\n{2}\n".format(bit_corr, byte_corr, ec.hexdump(data)))
+	data = ec.frame(data)
+	print("Encoded data:\n{0}".format(ec.hexdump(data)))

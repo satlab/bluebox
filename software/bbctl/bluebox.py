@@ -47,7 +47,7 @@ class Bluebox(object):
 	REQUEST_BITRATE		= 0x0B
 
 	# Bootloader Control
-	REQUEST_BOOTLOADER	= 0xFF
+	REQUEST_DFU		= 0xFF
 
 	# Registers
 	REGISTER_N		= 0
@@ -213,8 +213,8 @@ class Bluebox(object):
 	def rx_mode(self):
 		self._ctrl_write(self.REQUEST_RXTX_MODE, None, wValue=0)
 
-	def bootloader(self):
-		try: self._ctrl_write(self.REQUEST_BOOTLOADER, None, 0)
+	def dfu(self):
+		try: self._ctrl_write(self.REQUEST_DFU, None, 0)
 		except: pass
 
 	def transmit(self, text, timeout=10000):

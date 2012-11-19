@@ -26,6 +26,7 @@ import sys
 import time
 import os.path
 import argparse
+
 import bluebox
 import fec
 
@@ -57,9 +58,9 @@ def argument(*args, **kwargs):
 		return func
 	return _decorator
 	
-@subcommand("boot device into bootloader")
-def bootloader(args, bb):
-	bb.bootloader()
+@subcommand("boot device into DFU mode")
+def dfu(args, bb):
+	bb.dfu()
 
 @subcommand("show RF silicon revision")
 def version(args, bb):
@@ -101,31 +102,55 @@ def signal(args, bb):
 
 @subcommand("receive packets and print to screen")
 @argument('-d', '--decode', dest="decode", help="decode packets", action='store_true', default=False)
+@argument('-k', '--key', dest="key", help="HMAC key", default=None)
 def receive(args, bb):
 	last = time.time()
 	while True:
+		bit_corr = 0
+		byte_corr = 0
 		data = bb.receive()
 		if data is None:
 			break
 		if args.decode:
-			ph = fec.PacketHandler()
-			data = ph.deframe(data)
-		print("Recv ({0}) {1:.2f}s '{2}'".format(len(data), time.time() - last, ''.join(["{0:02x}".format(ord(x)) for x in data])))
+			ph = fec.PacketHandler(args.key)
+			data, bit_corr, byte_corr = ph.deframe(data)
+		print("RX ({0}) {1:.2f}s '{2}' ({3},{4})".format(len(data), time.time() - last, data.encode("hex"), bit_corr, byte_corr))
 		last = time.time()
 
 @subcommand("transmit packet data")
 @argument('packet', help="packet hex string to transmit")
 @argument('-r', '--wait-reply', dest="wait_reply", help="wait for reply", action='store_true', default=False)
 @argument('-e', '--encode', dest="encode", help="encode packets", action='store_true', default=False)
+@argument('-d', '--decode', dest="decode", help="decode packets", action='store_true', default=False)
+@argument('-k', '--key', dest="key", help="HMAC key", default=None)
 def transmit(args, bb):
+	if args.encode or args.decode:
+		ph = fec.PacketHandler(args.key)
+
 	bytes = args.packet.decode("hex")
+
+	print("TX ({0}) '{1}'".format(len(bytes), bytes.encode("hex")))
 	if args.encode:
-		ph = fec.PacketHandler()
 		bytes = ph.frame(bytes)
+
+	if args.verbose:
+		print("Transmit data:")
+		print(ph.hexdump(bytes))
+
 	bb.transmit(bytes)
 	if args.wait_reply:
 		data = bb.receive()
-		print("Recv ({0}) '{1}'".format(len(data), ''.join(["{0:02x}".format(ord(x)) for x in data])))
+		bit_corr = 0
+		byte_corr = 0
+
+		if args.verbose:
+			print("Receive data:")
+			print(ph.hexdump(data))
+
+		if args.decode:
+			data, bit_corr, byte_corr = ph.deframe(data)
+
+		print("RX ({0}) '{1}' ({2},{3})".format(len(data), data.encode("hex"), bit_corr, byte_corr))
 
 @subcommand("put device in test mode")
 @argument('mode', help="testmode type", choices=("carrier", "high", "low", "pn9", "1010", "syncword", "off"))
@@ -205,7 +230,7 @@ def config(args, bb):
 	training  = bb.get_training()
 	bitrate   = bb.get_bitrate();
 
-	print("Frequency:        {0} Hz".format(frequency))
+	print("Frequency:        {0:.3f} MHz".format(frequency/1.0e6))
 	print("Modulation Index: {0}".format(modindex))
 	print("Bitrate:          {0} bps".format(bitrate))
 	print("Training bytes:   {0} bytes".format(training))

@@ -21,7 +21,7 @@ CC = gcc
 LD = gcc
 SZ = size
 
-CFLAGS = -Wall -std=gnu99 -O2 -fPIC -ggdb
+CFLAGS = -Wall -std=gnu99 -O2 -fPIC -ggdb -Wextra
 
 LDFLAGS = -shared -Wl,-soname,$(TARGET)
 

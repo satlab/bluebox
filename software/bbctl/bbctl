@@ -223,6 +223,14 @@ def training(args, bb):
 	else:
 		print(bb.get_training())
 
+@subcommand("get or set device power level")
+@argument('power', type=int, help="power level (ADF702x PA setting, not in dBm!)", nargs="?", default=None)
+def power(args, bb):
+	if args.power is not None:
+		bb.set_power(args.power)
+	else:
+		print(bb.get_power())
+
 @subcommand("show current configuration")
 def config(args, bb):
 	frequency = bb.get_frequency()

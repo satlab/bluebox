@@ -21,14 +21,14 @@ CC = gcc
 LD = gcc
 SZ = size
 
-CFLAGS = -Wall -std=gnu99 -O2 -D_GNU_SOURCE -fPIC -Werror -ggdb
+CFLAGS = -Wall -std=gnu99 -O2 -fPIC -ggdb
 
 LDFLAGS = -shared -Wl,-soname,$(TARGET)
 
 INCLUDES = -I.
 
 LIBDIR = -L.
-LIBS = -lpthread -lrt
+LIBS =
 
 SOURCES=viterbi.c rs.c randomizer.c
 

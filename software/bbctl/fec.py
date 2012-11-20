@@ -67,10 +67,10 @@ bbfec.encode_viterbi.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
 bbfec.encode_viterbi.restype = None
 
 # rs
-bbfec.encode_rs_8.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
+bbfec.encode_rs_8.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
 bbfec.encode_rs_8.restype = None
 
-bbfec.decode_rs_8.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+bbfec.decode_rs_8.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
 bbfec.decode_rs_8.restype = ctypes.c_int
 
 # randomizer
@@ -144,7 +144,7 @@ class PacketHandler():
 
 		if self.rs:
 			pad = RS_BLOCK_LENGTH - RS_LENGTH - (rx_length - RS_LENGTH)
-			byte_corr = bbfec.decode_rs_8(data_mutable, None, 0, RS_LENGTH, pad)
+			byte_corr = bbfec.decode_rs_8(data_mutable, None, 0, pad)
 			rx_length = rx_length - RS_LENGTH
 
 		size = struct.unpack(">H", data_mutable[:SIZE_LENGTH])[0]
@@ -158,7 +158,7 @@ class PacketHandler():
 
 		if self.rs:
 			pad = RS_BLOCK_LENGTH - RS_LENGTH - tx_length
-			bbfec.encode_rs_8(data_mutable, ctypes.cast(ctypes.byref(data_mutable, tx_length), ctypes.POINTER(ctypes.c_char)), RS_LENGTH, pad)
+			bbfec.encode_rs_8(data_mutable, ctypes.cast(ctypes.byref(data_mutable, tx_length), ctypes.POINTER(ctypes.c_char)), pad)
 			tx_length += RS_LENGTH
 		
 		if self.randomize:
@@ -185,6 +185,6 @@ if __name__ == "__main__":
 	ec = PacketHandler(key)
 	print("Original data:\n{0}\n".format(ec.hexdump(TESTDATA)))
 	data, bit_corr, byte_corr = ec.deframe(TESTDATA)
-	print("Decoded data:({0},{1})\n{2}\n".format(bit_corr, byte_corr, ec.hexdump(data)))
+	print("Decoded data: ({0},{1})\n{2}\n".format(bit_corr, byte_corr, ec.hexdump(data)))
 	data = ec.frame(data)
 	print("Encoded data:\n{0}".format(ec.hexdump(data)))

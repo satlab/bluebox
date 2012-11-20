@@ -45,7 +45,7 @@ SHORT_FRAME_LIMIT  = 25
 LONG_FRAME_LIMIT   = 86
 
 path = os.path.dirname(os.path.realpath(__file__))
-bbfec = ctypes.CDLL(path + "/fec/bbfec.so", use_errno=True)
+bbfec = ctypes.CDLL(path + "/fec/bbfec.so")
 
 # viterbi
 bbfec.create_viterbi.argtypes = [ctypes.c_int16]
@@ -94,6 +94,9 @@ class PacketHandler():
 		self.viterbi = viterbi
 		self.rs = rs
 		self.randomize = randomize
+
+	def __del__(self):
+		bbfec.delete_viterbi(self.vp)
 
 	def hexdump(self, src, length=16):
 		filt = "".join([(len(repr(chr(x)))==3) and chr(x) or "." for x in range(256)])
@@ -146,6 +149,8 @@ class PacketHandler():
 			pad = RS_BLOCK_LENGTH - RS_LENGTH - (rx_length - RS_LENGTH)
 			byte_corr = bbfec.decode_rs_8(data_mutable, None, 0, pad)
 			rx_length = rx_length - RS_LENGTH
+			if byte_corr == -1:
+				raise Exception("Reed-Solomon decoding error")
 
 		size = struct.unpack(">H", data_mutable[:SIZE_LENGTH])[0]
 		

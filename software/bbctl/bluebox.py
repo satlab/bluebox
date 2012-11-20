@@ -97,7 +97,8 @@ class Bluebox(object):
 	DATAEPSIZE		= 512
 	DATAFMT			= "<HHH{0}s".format(DATALEN)
 	
-	def __init__(self, wait=False):
+	def __init__(self, wait=False, timeout=1000):
+		self.timeout = timeout
 		self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
 		if self.dev is None:
 			if not wait:
@@ -118,19 +119,19 @@ class Bluebox(object):
 		self.bus          = self.dev.bus
 		self.address      = self.dev.address
 
-	def _ctrl_write(self, request, data, wValue=0, wIndex=0, timeout=1000):
+	def _ctrl_write(self, request, data, wValue=0, wIndex=0):
 		bmRequestType = usb.util.build_request_type(
 					usb.util.CTRL_OUT,
 					usb.util.CTRL_TYPE_CLASS,
 					usb.util.CTRL_RECIPIENT_INTERFACE)
-		self.dev.ctrl_transfer(bmRequestType, request, wValue, wIndex, data, timeout)
+		self.dev.ctrl_transfer(bmRequestType, request, wValue, wIndex, data, self.timeout)
 
-	def _ctrl_read(self, request, length, wValue=0, wIndex=0, timeout=1000):
+	def _ctrl_read(self, request, length, wValue=0, wIndex=0):
 		bmRequestType = usb.util.build_request_type(
 					usb.util.CTRL_IN,
 					usb.util.CTRL_TYPE_CLASS,
 					usb.util.CTRL_RECIPIENT_INTERFACE)
-		return self.dev.ctrl_transfer(bmRequestType, request, wValue, wIndex, length, timeout)
+		return self.dev.ctrl_transfer(bmRequestType, request, wValue, wIndex, length, self.timeout)
 
 	def reg_read(self, reg):
 		return struct.unpack("<I", self._ctrl_read(self.REQUEST_REGISTER, 4, wValue=reg))[0] & 0xffff
@@ -224,17 +225,17 @@ class Bluebox(object):
 		try: self._ctrl_write(self.REQUEST_DFU, None, 0)
 		except: pass
 
-	def transmit(self, text, timeout=10000):
+	def transmit(self, text):
 		if len(text) > self.DATALEN:
 			raise Exception("Data too long")
 		data = struct.pack(self.DATAFMT, len(text), 0, 0, text)
-		self.dev.write(self.DATA_OUT, data, timeout=timeout)
+		self.dev.write(self.DATA_OUT, data, timeout=self.timeout)
 
 	def receive(self):
 		ret = None
 		while ret is None:
 			try:
-				ret = self.dev.read(self.DATA_IN, self.DATAEPSIZE, 0, timeout=1000)
+				ret = self.dev.read(self.DATA_IN, self.DATAEPSIZE, 0, timeout=self.timeout)
 				size, progress, flags, data = struct.unpack(self.DATAFMT, ret)
 				data = data[0:size]
 			except usb.core.USBError as e:

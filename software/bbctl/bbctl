@@ -152,8 +152,21 @@ def transmit(args, bb):
 
 		print("RX ({0}) '{1}' ({2},{3})".format(len(data), data.encode("hex"), bit_corr, byte_corr))
 
-@subcommand("put device in test mode")
-@argument('mode', help="testmode type", choices=("carrier", "high", "low", "pn9", "1010", "syncword", "off"))
+testmode_desc = """
+This command puts the BlueBox in testmode and transmits a test signal.
+
+The available test signals are:
+  carrier    continuously transmit carrier frequency
+  0101       transmit sequency of alternating 0's and 1's
+  high       transmit 1 frequency
+  low        transmit 0 frequency
+  pn9        transmit PN9 pattern
+  syncword   continuously transmit programmed syncword
+  off        disable test pattern
+"""
+
+@subcommand("put device in test mode", description=testmode_desc)
+@argument('mode', help="test signal", choices=("carrier", "high", "low", "pn9", "1010", "syncword", "off"))
 @argument('-l', '--limit', type=int, metavar="seconds", help="stop after limit seconds")
 def testmode(args, bb):
 	if args.mode == "carrier":
@@ -263,19 +276,24 @@ Main BlueBox satellite ground station control program. %(prog)s is used for
 controlling frequency, bitrate, etc. of the device and to transmit and
 receive data.
 
+The BlueBox firmware and bbctl is free software licensed under the MIT license.
+For more information see http://www.satlab.org or http://github.com/satlab
+
 """
 
 epilog="See '%(prog)s help <command>' for more information on a specific command."
 
 def main():
 	parser = argparse.ArgumentParser(description=desc, epilog=epilog, formatter_class=SubcommandHelpFormatter)
+	parser.add_argument("-d", metavar="<device>", default=None, help="select specific BlueBox device")
+	parser.add_argument("-t", metavar="<timeout>", type=int, default=1000, help="set transfer timeout in ms")
 	parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose output")
 	parser.add_argument("-w", "--wait", action="store_true", help="wait for device if not connected")
 	subparsers = parser.add_subparsers(title="The available subcommands are", metavar="<command>")
 
 	for sub in sorted(subcommands):
 		args, kwargs = subcommands[sub]["sub"]
-		subparser = subparsers.add_parser(*args, **kwargs)
+		subparser = subparsers.add_parser(*args, formatter_class=SubcommandHelpFormatter, **kwargs)
 		subcommands[sub]["parser"] = subparser
 		for args, kwargs in subcommands[sub]["args"]:
 			arg = args[0] if kwargs.get("nargs", "") == "?" else "<" + args[0] + ">"
@@ -298,7 +316,7 @@ def main():
 		sys.exit(0)
 
 	try:
-		bb = bluebox.Bluebox(wait=args.wait)
+		bb = bluebox.Bluebox(wait=args.wait, timeout=args.timeout)
 	except KeyboardInterrupt:
 		print()
 		sys.exit(0)

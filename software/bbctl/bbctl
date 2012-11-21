@@ -286,7 +286,7 @@ epilog="See '%(prog)s help <command>' for more information on a specific command
 def main():
 	parser = argparse.ArgumentParser(description=desc, epilog=epilog, formatter_class=SubcommandHelpFormatter)
 	parser.add_argument("-d", metavar="<device>", default=None, help="select specific BlueBox device")
-	parser.add_argument("-t", metavar="<timeout>", type=int, default=1000, help="set transfer timeout in ms")
+	parser.add_argument("-t", metavar="<timeout>", dest="timeout", type=int, default=1000, help="set transfer timeout in ms")
 	parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose output")
 	parser.add_argument("-w", "--wait", action="store_true", help="wait for device if not connected")
 	subparsers = parser.add_subparsers(title="The available subcommands are", metavar="<command>")

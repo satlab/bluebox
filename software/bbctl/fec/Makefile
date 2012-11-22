@@ -45,7 +45,7 @@ all: $(TARGET) $(SOURCES)
 	$(Q_CC)$(CC) $(CFLAGS) -c $< -o $@
 
 $(TARGET): $(OBJECTS)
-	$(Q_LD)$(LD) $(LDFLAGS) $(LIBS) -o $@ $<
+	$(Q_LD)$(LD) $(LDFLAGS) -o $@ $?
 	
 clean:
 	$(Q_RM)rm -rf $(OBJECTS) $(TARGET)

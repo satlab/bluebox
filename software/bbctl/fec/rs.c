@@ -1,3 +1,9 @@
+/*
+ * Reed-Solomon encoder/decoder
+ * Copyright 2004, Phil Karn, KA9Q
+ * May be used under the terms of the GNU Lesser General Public License (LGPL)
+ */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -35,7 +41,7 @@
 #undef A0
 #define A0 (NN) /* Special reserved value encoding zero in index form */
 
-void encode_rs_8(unsigned char *data, unsigned char *parity, int pad)
+void encode_rs(unsigned char *data, unsigned char *parity, int pad)
 {
     int i, j;
     unsigned char feedback;
@@ -89,7 +95,7 @@ void encode_rs_8(unsigned char *data, unsigned char *parity, int pad)
  * program.
  */
 
-int decode_rs_8(unsigned char *data, int *eras_pos, int no_eras, int pad){
+int decode_rs(unsigned char *data, int *eras_pos, int no_eras, int pad){
 	int retval;
 
 	if(pad < 0 || pad > 222){

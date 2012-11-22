@@ -67,11 +67,11 @@ bbfec.encode_viterbi.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
 bbfec.encode_viterbi.restype = None
 
 # rs
-bbfec.encode_rs_8.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
-bbfec.encode_rs_8.restype = None
+bbfec.encode_rs.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
+bbfec.encode_rs.restype = None
 
-bbfec.decode_rs_8.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
-bbfec.decode_rs_8.restype = ctypes.c_int
+bbfec.decode_rs.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
+bbfec.decode_rs.restype = ctypes.c_int
 
 # randomizer
 bbfec.ccsds_generate_sequence.argtypes = [ctypes.c_char_p, ctypes.c_int]
@@ -147,7 +147,7 @@ class PacketHandler():
 
 		if self.rs:
 			pad = RS_BLOCK_LENGTH - RS_LENGTH - (rx_length - RS_LENGTH)
-			byte_corr = bbfec.decode_rs_8(data_mutable, None, 0, pad)
+			byte_corr = bbfec.decode_rs(data_mutable, None, 0, pad)
 			rx_length = rx_length - RS_LENGTH
 			if byte_corr == -1:
 				raise Exception("Reed-Solomon decoding error")
@@ -163,7 +163,7 @@ class PacketHandler():
 
 		if self.rs:
 			pad = RS_BLOCK_LENGTH - RS_LENGTH - tx_length
-			bbfec.encode_rs_8(data_mutable, ctypes.cast(ctypes.byref(data_mutable, tx_length), ctypes.POINTER(ctypes.c_char)), pad)
+			bbfec.encode_rs(data_mutable, ctypes.cast(ctypes.byref(data_mutable, tx_length), ctypes.POINTER(ctypes.c_char)), pad)
 			tx_length += RS_LENGTH
 		
 		if self.randomize:

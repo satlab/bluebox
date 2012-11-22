@@ -1,3 +1,9 @@
+/*
+ * K=7 r=1/2 Viterbi decoder in portable C
+ * Copyright Feb 2004, Phil Karn, KA9Q
+ * May be used under the terms of the GNU Lesser General Public License (LGPL)
+ */
+
 #ifndef VITERBI_H_
 #define VITERBI_H_
 

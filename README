@@ -9,7 +9,9 @@ the MIT license with the hope that it may be useful to other cubesat projects.
 How to install bbctl
 --------------------
 
-Go to software/bbctl and run: $ sudo python2 setup.py install
+Go to software/bbctl and run:
+
+    $ sudo python2 setup.py install
 
 Note that you need gcc to compile the FEC extension module.
 

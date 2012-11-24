@@ -1,25 +1,37 @@
-The bluebox is a USB-powered ground station box for the AAUSAT3 cubesat satellite
+About the BlueBox
+-----------------
 
-The device firmware, control software and hardware is licensed under the MIT license.
+The bluebox is a USB-powered ground station box for the AAUSAT3 cubesat
+satellite. The device firmware, control software and hardware is licensed under
+the MIT license with the hope that it may be useful to other cubesat projects.
+
+
+How to install bbctl
+--------------------
+
+Go to software/bbctl and run: $ sudo python2 setup.py install
+
+Note that you need gcc to compile the FEC extension module.
+
 
 How to build and flash the firmware
-------------------------------------
+-----------------------------------
 
-In order to communicate with device without being root, write this line to /etc/udev/rules.d/49-bluebox.rules:
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="6666", MODE:="0666"
+In order to communicate with device without being root, copy 49-bluebox.rules
+and 49-atmel.rules to your udev rules directory (usually /etc/udev/rules.d).
 
-And this line to /etc/udev/rules.d/49-atmel.rules:
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="03eb", ATTRS{idProduct}=="2ff4", MODE:="0666"
+Now, compile and flash the software. The bbctl dfu step can be omitted if
+you're flashing the device for the first time:
 
-Now, compile and flash the software. The bbctl bootloader step can be omitted if you're flashing the device for the first time.
+    $ cd bluebox/software/firmware
+    $ make clean all 
+    $ bbctl dfu
+    $ make program
 
-$ cd bluebox/software/firmware
-$ make clean all
-$ ../bbctl/bbctl bootloader
-$ make program
+Finally, test the device by reading back the silicon revision of the ADF7021 RF
+chip:
 
-Finally, test the device by reading back the silicon revision of the ADF7021 RF chip:
+    $ bbctl version
+    0x2104
 
-$ cd bluebox/software/bbtcl
-$ ./bbctl version
-0x2104
+You can run bbctl help to get a list of available commands.

@@ -10,3 +10,4 @@
 *.sym
 *.pyc
 *.so
+software/bbctl/build

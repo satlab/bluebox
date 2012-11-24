@@ -26,7 +26,7 @@ Q_RM      = @echo ' ' CLEAN ' ' $(TARGET);
 endif
 endif
 
-TARGET = bbfec.so
+TARGET = ../bbfec.so
 CC = gcc
 LD = gcc
 SZ = size

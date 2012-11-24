@@ -208,7 +208,7 @@ void delete_viterbi(void *p)
  * Note that nbits is the number of decoded data bits, not the number
  * of symbols!
  */
-int update_viterbi(void *p, uint8_t *restrict syms, uint16_t nbits)
+int update_viterbi(void *p, uint8_t *syms, uint16_t nbits)
 {
     struct v27 *vp = p;
     void *tmp;

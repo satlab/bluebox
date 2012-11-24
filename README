@@ -1,9 +1,14 @@
 About the BlueBox
 -----------------
 
-The bluebox is a USB-powered ground station box for the AAUSAT3 cubesat
+The bluebox is a USB-powered ground station box design for the AAUSAT3 cubesat
 satellite. The device firmware, control software and hardware is licensed under
 the MIT license with the hope that it may be useful to other cubesat projects.
+
+The device is built around the Analog Devices ADF7021 transceiver and controlled
+by an Atmel ATMEGA32U4 microcontroller with hardware USB. The firmware makes use
+of the open source LUFA USB stack and uses libusb and pyusb for communication
+between the device and control program, bbctl.
 
 
 How to install bbctl
@@ -29,6 +34,9 @@ you're flashing the device for the first time:
     $ make clean all 
     $ bbctl dfu
     $ make program
+
+You need dfu-programmer to program the device. Install it from your package
+manager or from http://dfu-programmer.sourceforge.net/
 
 Finally, test the device by reading back the silicon revision of the ADF7021 RF
 chip:

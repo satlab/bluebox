@@ -219,13 +219,32 @@ void EVENT_USB_Device_ControlRequest(void)
 	}
 }
 
+bool csma_tx_allowed(void)
+{
+	int rssi;
+	static unsigned int quarantine = 0;
+
+	if (quarantine > 0) {
+		quarantine--;
+		delay_ms(1);
+	}
+
+	rssi = adf_readback_rssi();
+
+	if (rssi > conf.csma_rssi) {
+		quarantine = 100;
+	}
+
+	return (rssi <= conf.csma_rssi);
+}
+
 void bluebox_task(void)
 {
 	if (USB_DeviceState != DEVICE_STATE_Configured)
 		return;
 
 	Endpoint_SelectEndpoint(OUT_EPADDR);
-	if (Endpoint_IsOUTReceived() && spi_tx_allowed()) {
+	if (Endpoint_IsOUTReceived() && csma_tx_allowed() && spi_tx_allowed()) {
 		if (Endpoint_IsReadWriteAllowed()) {
 			Endpoint_Read_Stream_LE(&data[front], sizeof(data[front]), NULL);
 			adf_set_tx_mode();

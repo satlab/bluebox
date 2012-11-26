@@ -58,8 +58,7 @@
 #define TX_WAIT_TIMEOUT		120U
 #define TX_TIMEOUT_DELAY	10U
 #define RX_WAIT_TIMEOUT		120U
-#define CSMA_TIMEOUT		60U
-#define CSMA_RSSI		-70
+#define CSMA_RSSI		-110
 #define BAUD_RATE		2400
 #define MOD_INDEX		8
 #define PA_SETTING		8

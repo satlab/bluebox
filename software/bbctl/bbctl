@@ -57,6 +57,23 @@ def argument(*args, **kwargs):
 		subcommands[func.__name__]["args"].append(_option)
 		return func
 	return _decorator
+
+def parse_frequency(s):
+	prefixes = {'K': 1e3, 'M': 1e6, 'G': 1e9}
+	mult = 1
+	if s.lower().endswith("hz"):
+		s = s[:-2]
+	for prefix in prefixes.keys():
+		if s.upper().endswith(prefix):
+			mult = prefixes[prefix]
+			s = s[:-1]
+			break
+	try:
+		hz = int(float(s)*mult)
+	except:
+		raise argparse.ArgumentTypeError("{} is not a valid frequency".format(s))
+
+	return hz
 	
 @subcommand("boot device into DFU mode")
 def dfu(args, bb):
@@ -108,13 +125,13 @@ def receive(args, bb):
 	while True:
 		bit_corr = 0
 		byte_corr = 0
-		data = bb.receive()
+		data, rssi, freq = bb.receive()
 		if data is None:
 			break
 		if args.decode:
 			ph = fec.PacketHandler(args.key)
 			data, bit_corr, byte_corr = ph.deframe(data)
-		print("RX ({0}) {1:.2f}s '{2}' ({3},{4})".format(len(data), time.time() - last, data.encode("hex"), bit_corr, byte_corr))
+		print("RX ({0}) {1:.2f}s '{2}' ({3}b,{4}B) {5} dBb {6:+d} Hz".format(len(data), time.time() - last, data.encode("hex"), bit_corr, byte_corr, rssi, freq))
 		last = time.time()
 
 @subcommand("transmit packet data")
@@ -139,7 +156,7 @@ def transmit(args, bb):
 
 	bb.transmit(bytes)
 	if args.wait_reply:
-		data = bb.receive()
+		data, rssi, freq = bb.receive()
 		bit_corr = 0
 		byte_corr = 0
 
@@ -150,7 +167,7 @@ def transmit(args, bb):
 		if args.decode:
 			data, bit_corr, byte_corr = ph.deframe(data)
 
-		print("RX ({0}) '{1}' ({2},{3})".format(len(data), data.encode("hex"), bit_corr, byte_corr))
+		print("RX ({0}) '{1}' ({2}b,{3}B) {4} dBb {5:+d} Hz".format(len(data), data.encode("hex"), bit_corr, byte_corr, rssi, freq))
 
 testmode_desc = """
 This command puts the BlueBox in testmode and transmits a test signal.
@@ -205,7 +222,7 @@ def rxmode(args, bb):
 	bb.rx_mode()
 
 @subcommand("get or set device frequency")
-@argument('frequency', type=int, help="requested frequency", nargs="?", default=None)
+@argument('frequency', help="requested frequency", type=parse_frequency, nargs="?", default=None)
 def frequency(args, bb):
 	if args.frequency is not None:
 		bb.set_frequency(args.frequency)
@@ -244,12 +261,36 @@ def power(args, bb):
 	else:
 		print(bb.get_power())
 
+@subcommand("basic spectrum analysis")
+@argument("-c", metavar="center", dest="center", type=parse_frequency, help="center frequency in Hz", default=str(437.45e6))
+@argument("-s", metavar="span", dest="span", type=parse_frequency, help="frequency span in Hz", default=str(5e3))
+@argument("-b", metavar="bins", dest="bins", type=int, help="number of bins to divide span in", default=10)
+def spectrum(args, bb):
+	center = args.center
+	span = args.span
+	bins = args.bins
+
+	if center - span < 0:
+		raise Exception("Invalid span")
+
+	print("showing spectrum from {0} Hz to {1} Hz in {2} bins".format(
+					center-span//2, center+span//2, bins))
+
+	orig_freq = bb.get_frequency()
+	for freq in range(center - span//2, center + span//2+1, span//bins):
+		bb.set_frequency(freq)
+		rssi = bb.rssi()
+		print("{0}: {1} dBm".format(freq, rssi))
+	bb.set_frequency(orig_freq)
+
 @subcommand("show current configuration")
 def config(args, bb):
-	frequency = bb.get_frequency()
-	modindex  = bb.get_modindex()
-	training  = bb.get_training()
-	bitrate   = bb.get_bitrate();
+	frequency    = bb.get_frequency()
+	modindex     = bb.get_modindex()
+	training     = bb.get_training()
+	bitrate      = bb.get_bitrate()
+	received     = bb.get_received()
+	transmitted  = bb_get_transmitted()
 
 	print("Frequency:        {0:.3f} MHz".format(frequency/1.0e6))
 	print("Modulation Index: {0}".format(modindex))

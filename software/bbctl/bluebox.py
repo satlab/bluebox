@@ -93,11 +93,11 @@ class Bluebox(object):
 	SW_TOLERANCE_3BER	= 3
 
 	# Data length and format
-	DATALEN 		= 506
+	DATALEN 		= 502
 	DATAEPSIZE		= 512
-	DATAFMT			= "<HHH{0}s".format(DATALEN)
+	DATAFMT			= "<HHhhBB{0}s".format(DATALEN)
 	
-	def __init__(self, wait=False, timeout=1000):
+	def __init__(self, wait=False, timeout=0):
 		self.timeout = timeout
 		self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
 		if self.dev is None:
@@ -221,6 +221,12 @@ class Bluebox(object):
 	def rx_mode(self):
 		self._ctrl_write(self.REQUEST_RXTX_MODE, None, wValue=0)
 
+	def get_received(self):
+		return 0
+
+	def get_transmitted(self):
+		return 0
+
 	def dfu(self):
 		try: self._ctrl_write(self.REQUEST_DFU, None, 0)
 		except: pass
@@ -228,7 +234,7 @@ class Bluebox(object):
 	def transmit(self, text):
 		if len(text) > self.DATALEN:
 			raise Exception("Data too long")
-		data = struct.pack(self.DATAFMT, len(text), 0, 0, text)
+		data = struct.pack(self.DATAFMT, len(text), 0, 0, 0, 0, 0, text)
 		self.dev.write(self.DATA_OUT, data, timeout=self.timeout)
 
 	def receive(self):
@@ -236,9 +242,9 @@ class Bluebox(object):
 		while ret is None:
 			try:
 				ret = self.dev.read(self.DATA_IN, self.DATAEPSIZE, 0, timeout=self.timeout)
-				size, progress, flags, data = struct.unpack(self.DATAFMT, ret)
+				size, progress, rssi, freq, flags, training, data = struct.unpack(self.DATAFMT, ret)
 				data = data[0:size]
 			except usb.core.USBError as e:
 				if e.errno != errno.ETIMEDOUT:
 					raise
-		return data
+		return data, rssi, freq

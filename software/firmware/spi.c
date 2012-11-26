@@ -211,6 +211,11 @@ ISR(SPI_STC_vect)
 	} else {
 		data[front].data[data[front].progress++] = spi_read_data();
 
+		if (data[front].progress == 1) {
+			data[front].rssi = adf_readback_rssi();
+			data[front].freq = adf_readback_afc();
+		}
+
 		if (data[front].size == DATA_LENGTH) {
 			if (data[front].progress == FSM_POSITION) {
 				errs = frame_cuberrs(data[front].data);

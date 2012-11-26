@@ -93,13 +93,15 @@
 
 /* Buffer configuration */
 #define TOTAL_LENGTH		512
-#define DATA_LENGTH		(TOTAL_LENGTH - sizeof(uint16_t) - sizeof(uint16_t) - sizeof(uint8_t) - sizeof(uint8_t))
+#define DATA_LENGTH		(TOTAL_LENGTH - sizeof(uint16_t) * 4 - sizeof(uint8_t) * 2)
 #define NUM_BUFS		2
 
 /* This must be 512 bytes */
 struct data_buffer {
 	uint16_t size;
 	uint16_t progress;
+	int16_t rssi;
+	int16_t freq;
 	uint8_t flags;
 	uint8_t training;
 	uint8_t data[DATA_LENGTH];

@@ -237,14 +237,18 @@ class Bluebox(object):
 		data = struct.pack(self.DATAFMT, len(text), 0, 0, 0, 0, 0, text)
 		self.dev.write(self.DATA_OUT, data, timeout=self.timeout)
 
-	def receive(self):
-		ret = None
-		while ret is None:
-			try:
-				ret = self.dev.read(self.DATA_IN, self.DATAEPSIZE, 0, timeout=self.timeout)
-				size, progress, rssi, freq, flags, training, data = struct.unpack(self.DATAFMT, ret)
-				data = data[0:size]
-			except usb.core.USBError as e:
-				if e.errno != errno.ETIMEDOUT:
-					raise
+	def receive(self, timeout=-1):
+		if timeout == -1:
+			timeout = self.timeout
+		try:
+			ret = self.dev.read(self.DATA_IN, self.DATAEPSIZE, 0, timeout=self.timeout)
+			size, progress, rssi, freq, flags, training, data = struct.unpack(self.DATAFMT, ret)
+			data = data[0:size]
+		except KeyboardInterrupt:
+			raise
+		except:
+			data = None
+			rssi = 0
+			freq = 0
+
 		return data, rssi, freq

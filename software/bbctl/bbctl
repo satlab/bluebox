@@ -58,6 +58,12 @@ def argument(*args, **kwargs):
 		return func
 	return _decorator
 
+colors = {"gray": 30, "red": 31, "green": 32, "yellow": 33, "blue": 34,
+	  "magenta": 35, "cyan": 36, "white": 37, "crimson": 38}
+
+def color_print(color, text):
+	print("\033[{0}m{1}\033[0m".format(color, text))
+
 def parse_frequency(s):
 	prefixes = {'K': 1e3, 'M': 1e6, 'G': 1e9}
 	mult = 1
@@ -74,6 +80,14 @@ def parse_frequency(s):
 		raise argparse.ArgumentTypeError("{} is not a valid frequency".format(s))
 
 	return hz
+
+def parse_int(s):
+	try:
+		integer = int(s, 0)
+	except:
+		raise argparse.ArgumentTypeError("{} is not a valid integer".format(s))
+
+	return integer
 	
 @subcommand("boot device into DFU mode")
 def dfu(args, bb):
@@ -121,18 +135,24 @@ def signal(args, bb):
 @argument('-d', '--decode', dest="decode", help="decode packets", action='store_true', default=False)
 @argument('-k', '--key', dest="key", help="HMAC key", default=None)
 def receive(args, bb):
-	last = time.time()
+	count = 0
+	ph = fec.PacketHandler(args.key)
 	while True:
 		bit_corr = 0
 		byte_corr = 0
 		data, rssi, freq = bb.receive()
 		if data is None:
-			break
+			continue
+
 		if args.decode:
-			ph = fec.PacketHandler(args.key)
-			data, bit_corr, byte_corr = ph.deframe(data)
-		print("RX ({0}) {1:.2f}s '{2}' ({3}b,{4}B) {5} dBb {6:+d} Hz".format(len(data), time.time() - last, data.encode("hex"), bit_corr, byte_corr, rssi, freq))
-		last = time.time()
+			try:
+				data, bit_corr, byte_corr = ph.deframe(data)
+			except:
+				byte_corr = -1
+		
+		color = colors["red"] if byte_corr == -1 else colors["yellow"] if bit_corr or byte_corr else colors["green"]
+		color_print(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+d} Hz ({6:03}) '{7}'".format(count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
+		count += 1
 
 @subcommand("transmit packet data")
 @argument('packet', help="packet hex string to transmit")
@@ -140,34 +160,53 @@ def receive(args, bb):
 @argument('-e', '--encode', dest="encode", help="encode packets", action='store_true', default=False)
 @argument('-d', '--decode', dest="decode", help="decode packets", action='store_true', default=False)
 @argument('-k', '--key', dest="key", help="HMAC key", default=None)
+@argument('-c', '--continuous', dest="continuous", help="Continuously send data", action="store_true")
+@argument('-s', '--switch', dest="switch", help="Switching time in ms", type=int, default=0)
 def transmit(args, bb):
+	continuous = True
+	tx_count = 0
+	rx_count = 0
+
 	if args.encode or args.decode:
 		ph = fec.PacketHandler(args.key)
 
-	bytes = args.packet.decode("hex")
-
-	print("TX ({0}) '{1}'".format(len(bytes), bytes.encode("hex")))
-	if args.encode:
-		bytes = ph.frame(bytes)
-
-	if args.verbose:
-		print("Transmit data:")
-		print(ph.hexdump(bytes))
-
-	bb.transmit(bytes)
-	if args.wait_reply:
-		data, rssi, freq = bb.receive()
-		bit_corr = 0
-		byte_corr = 0
+	while continuous:
+		bytes = args.packet.decode("hex")
+		color_print(colors["blue"], "{0:03} {1:.2f} TX ({2}) '{3}'".format(tx_count, time.time(), len(bytes), bytes.encode("hex")))
+		if args.encode:
+			bytes = ph.frame(bytes)
 
 		if args.verbose:
-			print("Receive data:")
-			print(ph.hexdump(data))
+			print("Transmit data:")
+			print(ph.hexdump(bytes))
 
-		if args.decode:
-			data, bit_corr, byte_corr = ph.deframe(data)
+		bb.transmit(bytes)
+		tx_count += 1
+		if args.wait_reply:
+			data, rssi, freq = bb.receive()
+			if data is None:
+				color_print(colors["yellow"], "Timeout while waiting for reply reply")
+			else:
+				bit_corr = 0
+				byte_corr = 0
 
-		print("RX ({0}) '{1}' ({2}b,{3}B) {4} dBb {5:+d} Hz".format(len(data), data.encode("hex"), bit_corr, byte_corr, rssi, freq))
+				if args.verbose:
+					print("Receive data:")
+					print(ph.hexdump(data))
+
+				if args.decode:
+					try:
+						data, bit_corr, byte_corr = ph.deframe(data)
+					except:
+						byte_corr = -1
+				
+				color = colors["red"] if byte_corr == -1 else colors["yellow"] if bit_corr or byte_corr else colors["green"]
+
+				color_print(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+d} Hz ({6:03}) '{7}'".format(rx_count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
+				rx_count += 1
+
+		continuous = args.continuous
+		time.sleep(args.switch/1000.0)
 
 testmode_desc = """
 This command puts the BlueBox in testmode and transmits a test signal.
@@ -297,14 +336,6 @@ def config(args, bb):
 	print("Bitrate:          {0} bps".format(bitrate))
 	print("Training bytes:   {0} bytes".format(training))
 
-def parse_int(s):
-	try:
-		integer = int(s, 0)
-	except:
-		raise argparse.ArgumentTypeError("{} is not a valid integer".format(s))
-
-	return integer
-
 @subcommand("set ADF7021 register")
 @argument("register", type=parse_int, help="register number to write")
 @argument("value", type=parse_int, help="new register value")
@@ -341,7 +372,7 @@ epilog="See '%(prog)s help <command>' for more information on a specific command
 def main():
 	parser = argparse.ArgumentParser(description=desc, epilog=epilog, formatter_class=SubcommandHelpFormatter)
 	parser.add_argument("-d", metavar="<device>", default=None, help="select specific BlueBox device")
-	parser.add_argument("-t", metavar="<timeout>", dest="timeout", type=int, default=1000, help="set transfer timeout in ms")
+	parser.add_argument("-t", metavar="<timeout>", dest="timeout", type=int, default=10000, help="set transfer timeout in ms")
 	parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose output")
 	parser.add_argument("-w", "--wait", action="store_true", help="wait for device if not connected")
 	subparsers = parser.add_subparsers(title="The available subcommands are", metavar="<command>")

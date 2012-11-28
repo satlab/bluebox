@@ -137,7 +137,7 @@ class Bluebox(object):
 		return struct.unpack("<I", self._ctrl_read(self.REQUEST_REGISTER, 4, wValue=reg))[0] & 0xffff
 
 	def reg_write(self, reg, value):
-		value = struct.pack("<I", value | reg)
+		value = struct.pack("<I", (value & ~0xff) | reg)
 		self._ctrl_write(self.REQUEST_REGISTER, value, wValue=reg)
 
 	def set_frequency(self, freq):

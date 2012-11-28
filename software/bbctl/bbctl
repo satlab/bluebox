@@ -54,7 +54,7 @@ def argument(*args, **kwargs):
 			subcommands[func.__name__] = {}
 		if not subcommands[func.__name__].has_key("args"):
 			subcommands[func.__name__]["args"] = []
-		subcommands[func.__name__]["args"].append(_option)
+		subcommands[func.__name__]["args"].insert(0, _option)
 		return func
 	return _decorator
 
@@ -296,6 +296,20 @@ def config(args, bb):
 	print("Modulation Index: {0}".format(modindex))
 	print("Bitrate:          {0} bps".format(bitrate))
 	print("Training bytes:   {0} bytes".format(training))
+
+def parse_int(s):
+	try:
+		integer = int(s, 0)
+	except:
+		raise argparse.ArgumentTypeError("{} is not a valid integer".format(s))
+
+	return integer
+
+@subcommand("set ADF7021 register")
+@argument("register", type=parse_int, help="register number to write")
+@argument("value", type=parse_int, help="new register value")
+def register(args, bb):
+	bb.reg_write(args.register, (args.value << 8))
 
 @subcommand("show detailed help for subcommand")
 @argument('command', help="detailed help command", nargs="?", default=None)

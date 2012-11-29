@@ -354,7 +354,9 @@ class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
 		parts = super(argparse.RawDescriptionHelpFormatter, self)._format_action(action)
 		if action.nargs == argparse.PARSER:
-			parts = "\n".join([part[2:] for part in parts.split("\n")[1:]])
+			parts = parts.split("\n")
+			parts = ["   "+"  ".join(part.lstrip().split(" ", 1)) for part in parts[1:]]
+			parts = "\n".join(parts)
 		return parts
 
 desc = """

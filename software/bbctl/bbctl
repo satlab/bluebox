@@ -26,6 +26,7 @@ import sys
 import time
 import os.path
 import argparse
+import copy
 
 import bluebox
 import fec
@@ -58,11 +59,11 @@ def argument(*args, **kwargs):
 		return func
 	return _decorator
 
-colors = {"gray": 30, "red": 31, "green": 32, "yellow": 33, "blue": 34,
-	  "magenta": 35, "cyan": 36, "white": 37, "crimson": 38}
+colors = {"gray": 30, "red": 31, "green": 32, "yellow": 33,
+	  "blue": 34, "magenta": 35, "cyan": 36, "white": 37}
 
-def color_print(color, text):
-	print("\033[{0}m{1}\033[0m".format(color, text))
+def colorize(color, text, *args, **kwargs):
+	print("\033[{0}m{1}\033[0m".format(colors[color], text), *args, **kwargs)
 
 def parse_frequency(s):
 	prefixes = {'K': 1e3, 'M': 1e6, 'G': 1e9}
@@ -150,8 +151,8 @@ def receive(args, bb):
 			except:
 				byte_corr = -1
 		
-		color = colors["red"] if byte_corr == -1 else colors["yellow"] if bit_corr or byte_corr else colors["green"]
-		color_print(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+d} Hz ({6:03}) '{7}'".format(count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
+		color = "red" if byte_corr == -1 else "yellow" if bit_corr or byte_corr else "green"
+		colorize(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+d} Hz ({6:03}) '{7}'".format(count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
 		count += 1
 
 @subcommand("transmit packet data")
@@ -172,7 +173,7 @@ def transmit(args, bb):
 
 	while continuous:
 		bytes = args.packet.decode("hex")
-		color_print(colors["blue"], "{0:03} {1:.2f} TX ({2}) '{3}'".format(tx_count, time.time(), len(bytes), bytes.encode("hex")))
+		colorize("blue", "{0:03} {1:.2f} TX ({2}) '{3}'".format(tx_count, time.time(), len(bytes), bytes.encode("hex")))
 		if args.encode:
 			bytes = ph.frame(bytes)
 
@@ -185,7 +186,7 @@ def transmit(args, bb):
 		if args.wait_reply:
 			data, rssi, freq = bb.receive()
 			if data is None:
-				color_print(colors["yellow"], "Timeout while waiting for reply reply")
+				colorize("yellow", "Timeout while waiting for reply reply")
 			else:
 				bit_corr = 0
 				byte_corr = 0
@@ -200,9 +201,9 @@ def transmit(args, bb):
 					except:
 						byte_corr = -1
 				
-				color = colors["red"] if byte_corr == -1 else colors["yellow"] if bit_corr or byte_corr else colors["green"]
+				color = "red" if byte_corr == -1 else "yellow" if bit_corr or byte_corr else "green"
 
-				color_print(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+d} Hz ({6:03}) '{7}'".format(rx_count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
+				colorize(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+d} Hz ({6:03}) '{7}'".format(rx_count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
 				rx_count += 1
 
 		continuous = args.continuous

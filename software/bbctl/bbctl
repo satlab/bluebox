@@ -162,13 +162,15 @@ def receive(args, bb):
 @argument('-d', '--decode', dest="decode", help="decode packets", action='store_true', default=False)
 @argument('-k', '--key', dest="key", help="HMAC key", default=None)
 @argument('-c', '--continuous', dest="continuous", help="Continuously send data", action="store_true")
-@argument('-s', '--switch', dest="switch", help="Switching time in ms", type=int, default=0)
+@argument('-s', '--switch', dest="switch", metavar="MS", help="Switching time in ms", type=int, default=0)
 def transmit(args, bb):
 	continuous = True
 	tx_count = 0
 	rx_count = 0
 
 	if args.encode or args.decode:
+		if not args.key:
+			subcommands[args.subparser]["parser"].error("-e/-d require a key passed with -k")
 		ph = fec.PacketHandler(args.key)
 
 	while continuous:
@@ -378,7 +380,7 @@ def main():
 	parser.add_argument("-t", metavar="<timeout>", dest="timeout", type=int, default=10000, help="set transfer timeout in ms")
 	parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose output")
 	parser.add_argument("-w", "--wait", action="store_true", help="wait for device if not connected")
-	subparsers = parser.add_subparsers(title="The available subcommands are", metavar="<command>")
+	subparsers = parser.add_subparsers(dest="subparser", title="The available subcommands are", metavar="<command>")
 
 	for sub in sorted(subcommands):
 		args, kwargs = subcommands[sub]["sub"]

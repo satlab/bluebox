@@ -137,7 +137,10 @@ def signal(args, bb):
 @argument('-k', '--key', dest="key", help="HMAC key", default=None)
 def receive(args, bb):
 	count = 0
-	ph = fec.PacketHandler(args.key)
+	if args.decode:
+		if not args.key:
+			subcommands[args.subparser]["parser"].error("-d requires a key passed with -k")
+		ph = fec.PacketHandler(args.key)
 	while True:
 		bit_corr = 0
 		byte_corr = 0
@@ -170,7 +173,7 @@ def transmit(args, bb):
 
 	if args.encode or args.decode:
 		if not args.key:
-			subcommands[args.subparser]["parser"].error("-e/-d require a key passed with -k")
+			subcommands[args.subparser]["parser"].error("-e/-d requires a key passed with -k")
 		ph = fec.PacketHandler(args.key)
 
 	while continuous:

@@ -78,6 +78,17 @@ void setup_hardware(void)
 	spi_init_config(SPI_SLAVE | SPI_MSB_FIRST);
 }
 
+void flash_leds(void)
+{
+	led_on(LED_ALL);
+	delay_ms(75);
+	led_off(LED_ALL);
+	delay_ms(100);
+	led_on(LED_ALL);
+	delay_ms(75);
+	led_off(LED_ALL);
+}
+
 void callsign_init(char *cs)
 {
 	int i;
@@ -195,7 +206,10 @@ static void do_control_request(int direction)
 	case REQUEST_BITRATE:
 		do_bitrate(direction, USB_ControlRequest.wValue);
 		break;
-	case REQUEST_BOOTLOADER:
+	case REQUEST_RESET:
+		reboot();
+		break;
+	case REQUEST_DFU:
 		jump_to_bootloader();
 		break;
 	}
@@ -261,6 +275,8 @@ int main(void)
 	GlobalInterruptEnable();
 
 	callsign_init(conf.callsign);
+
+	flash_leds();
 
 	adf_set_power_on(XTAL_FREQ);
 	adf_configure();

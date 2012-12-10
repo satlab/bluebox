@@ -48,7 +48,8 @@
 #define	REQUEST_RXTX_MODE	0x0A
 #define REQUEST_BITRATE		0x0B
 #define REQUEST_DATA		0x0C
-#define REQUEST_BOOTLOADER 	0xFF
+#define REQUEST_RESET		0xFE
+#define REQUEST_DFU		0xFF
 
 /* Board xtal frequency */
 #define XTAL_FREQ 		16000000

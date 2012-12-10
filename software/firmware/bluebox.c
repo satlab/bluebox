@@ -63,7 +63,7 @@ struct bluebox_config conf = {
 	.training_symbol = TRAINING_SYMBOL,
 };
 
-void setup_hardware(void)
+static void setup_hardware(void)
 {
 	MCUSR &= ~(1 << WDRF);
 	wdt_disable();
@@ -78,7 +78,7 @@ void setup_hardware(void)
 	spi_init_config(SPI_SLAVE | SPI_MSB_FIRST);
 }
 
-void flash_leds(void)
+static void flash_leds(void)
 {
 	led_on(LED_ALL);
 	delay_ms(75);
@@ -89,7 +89,7 @@ void flash_leds(void)
 	led_off(LED_ALL);
 }
 
-void callsign_init(char *cs)
+static void callsign_init(char *cs)
 {
 	int i;
 
@@ -215,25 +215,7 @@ static void do_control_request(int direction)
 	}
 }
 
-void EVENT_USB_Device_ControlRequest(void)
-{
-	switch (USB_ControlRequest.bmRequestType) {
-	case (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE):
-		Endpoint_ClearSETUP();
-		do_control_request(ENDPOINT_DIR_OUT);
-		Endpoint_ClearIN();
-		break;
-	case (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE):
-		Endpoint_ClearSETUP();
-		do_control_request(ENDPOINT_DIR_IN);
-		Endpoint_ClearOUT();
-		break;
-	default:
-		break;
-	}
-}
-
-bool csma_tx_allowed(void)
+static bool csma_tx_allowed(void)
 {
 	int rssi;
 	static unsigned int quarantine = 0;
@@ -252,7 +234,7 @@ bool csma_tx_allowed(void)
 	return (rssi <= conf.csma_rssi);
 }
 
-void bluebox_task(void)
+static void bluebox_task(void)
 {
 	if (USB_DeviceState != DEVICE_STATE_Configured)
 		return;
@@ -266,6 +248,24 @@ void bluebox_task(void)
 		}
 
 		Endpoint_ClearOUT();
+	}
+}
+
+void EVENT_USB_Device_ControlRequest(void)
+{
+	switch (USB_ControlRequest.bmRequestType) {
+	case (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE):
+		Endpoint_ClearSETUP();
+		do_control_request(ENDPOINT_DIR_OUT);
+		Endpoint_ClearIN();
+		break;
+	case (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE):
+		Endpoint_ClearSETUP();
+		do_control_request(ENDPOINT_DIR_IN);
+		Endpoint_ClearOUT();
+		break;
+	default:
+		break;
 	}
 }
 

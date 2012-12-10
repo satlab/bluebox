@@ -18,17 +18,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+from __future__ import print_function
+
 import sys
 import platform
 import errno
 import time
 import struct
+import subprocess
 import usb
 
 class Bluebox(object):
 	# USB VID/PID
 	VENDOR  		= 0x1d50
 	PRODUCT 		= 0x6666
+
+	# Atmel bootloader VID/PID
+	ATMEL_VENDOR		= 0x03eb
+	ATMEL_PRODUCT		= 0x2ff4
+
+	# MCU type
+	MCU 			= "atmega32u4"
 
 	# Data Endpoints
 	DATA_IN	     = (usb.util.ENDPOINT_IN  | 1)
@@ -48,6 +58,7 @@ class Bluebox(object):
 	REQUEST_BITRATE		= 0x0B
 
 	# Bootloader Control
+	REQUEST_RESET		= 0xFE
 	REQUEST_DFU		= 0xFF
 
 	# Registers
@@ -229,6 +240,31 @@ class Bluebox(object):
 
 	def dfu(self):
 		try: self._ctrl_write(self.REQUEST_DFU, None, 0)
+		except: pass
+
+		time.sleep(1)
+
+		self.dev = usb.core.find(idVendor=self.ATMEL_VENDOR, idProduct=self.ATMEL_PRODUCT)
+		if self.dev is None:
+			raise Exception("Failed to set device in DFU mode")
+
+	def update(self, filename):
+		self.dfu()
+
+		subprocess.check_output(["dfu-programmer", self.MCU, "erase"], stderr=subprocess.STDOUT)
+		subprocess.check_output(["dfu-programmer", self.MCU, "flash", filename], stderr=subprocess.STDOUT)
+		subprocess.check_output(["dfu-programmer", self.MCU, "start"], stderr=subprocess.STDOUT)
+
+		time.sleep(1)
+
+		self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
+		if self.dev is None:
+			raise Exception("Failed to set device in DFU mode")
+
+		print("Device updated succesfully")
+
+	def reset(self):
+		try: self._ctrl_write(self.REQUEST_RESET, None, 0)
 		except: pass
 
 	def transmit(self, text):

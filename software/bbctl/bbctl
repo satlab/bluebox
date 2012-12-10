@@ -89,10 +89,19 @@ def parse_int(s):
 		raise argparse.ArgumentTypeError("{} is not a valid integer".format(s))
 
 	return integer
-	
-@subcommand("boot device into DFU mode")
+
+@subcommand("set device in DFU mode")
 def dfu(args, bb):
 	bb.dfu()
+
+@subcommand("update device firmware")
+@argument('filename', help="firmware file to flash")
+def update(args, bb):
+	bb.update(args.filename)
+
+@subcommand("reset BlueBox")
+def reset(args, bb):
+	bb.reset()
 
 @subcommand("show RF silicon revision")
 def version(args, bb):
@@ -155,7 +164,7 @@ def receive(args, bb):
 				byte_corr = -1
 		
 		color = "red" if byte_corr == -1 else "yellow" if bit_corr or byte_corr else "green"
-		colorize(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+d} Hz ({6:03}) '{7}'".format(count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
+		colorize(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+5d} Hz ({6:03}) '{7}'".format(count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
 		count += 1
 
 @subcommand("transmit packet data")
@@ -191,7 +200,7 @@ def transmit(args, bb):
 		if args.wait_reply:
 			data, rssi, freq = bb.receive()
 			if data is None:
-				colorize("yellow", "Timeout while waiting for reply reply")
+				colorize("yellow", "Timeout while waiting for reply")
 			else:
 				bit_corr = 0
 				byte_corr = 0
@@ -208,7 +217,7 @@ def transmit(args, bb):
 				
 				color = "red" if byte_corr == -1 else "yellow" if bit_corr or byte_corr else "green"
 
-				colorize(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+d} Hz ({6:03}) '{7}'".format(rx_count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
+				colorize(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+5d} Hz ({6:03}) '{7}'".format(rx_count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
 				rx_count += 1
 
 		continuous = args.continuous

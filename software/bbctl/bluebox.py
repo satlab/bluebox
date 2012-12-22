@@ -31,7 +31,7 @@ import usb
 class Bluebox(object):
 	# USB VID/PID
 	VENDOR  		= 0x1d50
-	PRODUCT 		= 0x6666
+	PRODUCT 		= 0x6054
 
 	# Atmel bootloader VID/PID
 	ATMEL_VENDOR		= 0x03eb

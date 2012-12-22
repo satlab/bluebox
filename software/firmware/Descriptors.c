@@ -33,9 +33,8 @@ const USB_Descriptor_Device_t PROGMEM BlueBox_DeviceDescriptor = {
 
 	.Endpoint0Size          = FIXED_CONTROL_ENDPOINT_SIZE,
 
-	/* Note: these have not been allocated from OpenMoko yet! */
 	.VendorID               = 0x1d50,
-	.ProductID              = 0x6666,
+	.ProductID              = 0x6054,
 
 	.ReleaseNumber          = VERSION_BCD(01.00),
 

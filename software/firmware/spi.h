@@ -163,8 +163,10 @@ void spi_tx_done(void);
 int spi_tx_wait(void);
 bool spi_tx_allowed(void);
 void spi_rx_task(void);
+bool spi_tx_in_progress(void);
 
 extern struct data_buffer data[NUM_BUFS];
 extern uint8_t front;
+extern uint8_t back;
 
 #endif /* _SPI_H_ */

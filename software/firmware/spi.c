@@ -141,6 +141,7 @@ void spi_tx_start(void)
 
 void spi_tx_done(void)
 {
+	data[front].flags &= ~FLAG_TX_READY;
 	spi_disable_it();
 	spi_disable();
 	swd_enable();
@@ -150,18 +151,17 @@ void spi_tx_done(void)
 
 bool spi_tx_allowed(void)
 {
-	bool allow = false;
-
 	swd_disable();
 
 	if (spi_mode == SPI_MODE_RX)
-		goto out;
+		return false;
+
+	if ((spi_mode == SPI_MODE_TX) && (data[back].flags & FLAG_TX_READY))
+		return false;
 
 	spi_mode = SPI_MODE_TX;
-	allow = true;
 
-out:
-	return allow;
+	return true;
 }
 
 void spi_rx_task(void)
@@ -177,9 +177,20 @@ void spi_rx_task(void)
 
 void flip_buffers(void)
 {
-	data[front].flags |= FLAG_RX_READY;
 	back = front;
 	front = !front;
+}
+
+void flip_rx_buffers(void)
+{
+	data[front].flags |= FLAG_RX_READY;
+	flip_buffers();
+}
+
+void flip_tx_buffers(void)
+{
+	data[front].flags &= ~FLAG_TX_READY;
+	flip_buffers();
 }
 
 ISR(INT6_vect)
@@ -205,8 +216,13 @@ ISR(SPI_STC_vect)
 		}
 
 		if (data[front].progress > (data[front].size + CALLSIGN_LENGTH + FSM_LENGTH)) {
-			spi_tx_done();
-			adf_set_rx_mode();
+			if (data[back].flags & FLAG_TX_READY) {
+				flip_tx_buffers();
+				spi_tx_start();
+			} else {
+				spi_tx_done();
+				adf_set_rx_mode();
+			}
 		}
 	} else {
 		data[front].data[data[front].progress++] = spi_read_data();
@@ -235,7 +251,7 @@ ISR(SPI_STC_vect)
 
 		if (data[front].progress >= data[front].size) {
 			spi_rx_done();
-			flip_buffers();
+			flip_rx_buffers();
 			adf_set_threshold_free();
 			return;
 		}

@@ -242,12 +242,17 @@ static void bluebox_task(void)
 	Endpoint_SelectEndpoint(OUT_EPADDR);
 	if (Endpoint_IsOUTReceived() && csma_tx_allowed() && spi_tx_allowed()) {
 		if (Endpoint_IsReadWriteAllowed()) {
-			Endpoint_Read_Stream_LE(&data[front], sizeof(data[front]), NULL);
-			adf_set_tx_mode();
-			spi_tx_start();
+			if (!(data[front].flags & FLAG_TX_READY)) {
+				Endpoint_Read_Stream_LE(&data[front], sizeof(data[front]), NULL);
+				data[front].flags |= FLAG_TX_READY;
+				adf_set_tx_mode();
+				spi_tx_start();
+			} else {
+				Endpoint_Read_Stream_LE(&data[back], sizeof(data[back]), NULL);
+				data[back].flags |= FLAG_TX_READY;
+			}
+			Endpoint_ClearOUT();
 		}
-
-		Endpoint_ClearOUT();
 	}
 }
 

@@ -59,7 +59,7 @@
 #define TX_WAIT_TIMEOUT		120U
 #define TX_TIMEOUT_DELAY	10U
 #define RX_WAIT_TIMEOUT		120U
-#define CSMA_RSSI		-110
+#define CSMA_RSSI		-50
 #define BAUD_RATE		2400
 #define MOD_INDEX		8
 #define PA_SETTING		8
@@ -107,7 +107,8 @@ struct data_buffer {
 	uint8_t data[DATA_LENGTH];
 };
 
-#define FLAG_RX_READY		(1 << 0)
+#define FLAG_RX_READY		0x01
+#define FLAG_TX_READY		0x02
 
 struct bluebox_config {
 	uint32_t freq;

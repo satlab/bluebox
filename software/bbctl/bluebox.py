@@ -108,9 +108,14 @@ class Bluebox(object):
 	DATAEPSIZE		= 512
 	DATAFMT			= "<HHhhBB{0}s".format(DATALEN)
 	
-	def __init__(self, wait=False, timeout=0):
+	def __init__(self, index=0, wait=False, timeout=0):
 		self.timeout = timeout
-		self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
+		self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT, find_all=True)
+		if len(self.dev) < index + 1:
+			raise Exception("No BlueBox at index {0}".format(index))
+		else:
+			self.dev = self.dev[index]
+
 		if self.dev is None:
 			if not wait:
 				raise Exception("Device not found")
@@ -192,6 +197,15 @@ class Bluebox(object):
 		power = self._ctrl_read(self.REQUEST_POWER, 1)
 		power = struct.unpack("<B", power)[0]
 		return power
+
+	def set_csma(self, level):
+		level = struct.pack("<h", level)
+		self._ctrl_write(self.REQUEST_CSMA_RSSI, level)
+
+	def get_csma(self):
+		level = self._ctrl_read(self.REQUEST_CSMA_RSSI, 2)
+		level = struct.unpack("<h", level)[0]
+		return level
 
 	def set_training(self, training):
 		training = struct.pack("<B", training)

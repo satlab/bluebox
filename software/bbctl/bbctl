@@ -62,8 +62,10 @@ def argument(*args, **kwargs):
 colors = {"gray": 30, "red": 31, "green": 32, "yellow": 33,
 	  "blue": 34, "magenta": 35, "cyan": 36, "white": 37}
 
+enable_colors = False
+
 def colorize(color, text, *args, **kwargs):
-	print("\033[{0}m{1}\033[0m".format(colors[color], text), *args, **kwargs)
+	print("\033[{0}m{1}\033[0m".format(colors[color] if enable_colors else 0, text), *args, **kwargs)
 
 def parse_frequency(s):
 	prefixes = {'K': 1e3, 'M': 1e6, 'G': 1e9}
@@ -78,7 +80,7 @@ def parse_frequency(s):
 	try:
 		hz = int(float(s)*mult)
 	except:
-		raise argparse.ArgumentTypeError("{} is not a valid frequency".format(s))
+		raise argparse.ArgumentTypeError("{0} is not a valid frequency".format(s))
 
 	return hz
 
@@ -86,9 +88,19 @@ def parse_int(s):
 	try:
 		integer = int(s, 0)
 	except:
-		raise argparse.ArgumentTypeError("{} is not a valid integer".format(s))
+		raise argparse.ArgumentTypeError("{0} is not a valid integer".format(s))
 
 	return integer
+
+def parse_power(s):
+	try:
+		power = int(s)
+		if power < 0 or power > 63:
+			raise ValueError
+	except:
+		raise argparse.ArgumentTypeError("power must be between 0 and 63")
+
+	return power
 
 @subcommand("set device in DFU mode")
 def dfu(args, bb):
@@ -168,13 +180,14 @@ def receive(args, bb):
 		count += 1
 
 @subcommand("transmit packet data")
-@argument('packet', help="packet hex string to transmit")
+@argument('packet', help="packet hex string to transmit", nargs="+")
 @argument('-r', '--wait-reply', dest="wait_reply", help="wait for reply", action='store_true', default=False)
 @argument('-e', '--encode', dest="encode", help="encode packets", action='store_true', default=False)
 @argument('-d', '--decode', dest="decode", help="decode packets", action='store_true', default=False)
 @argument('-k', '--key', dest="key", help="HMAC key", default=None)
 @argument('-c', '--continuous', dest="continuous", help="Continuously send data", action="store_true")
 @argument('-s', '--switch', dest="switch", metavar="MS", help="Switching time in ms", type=int, default=0)
+@argument('-n', '--number', dest="number", help="Repeat transmission NUMBER times", type=int, default=1)
 def transmit(args, bb):
 	continuous = True
 	tx_count = 0
@@ -186,42 +199,44 @@ def transmit(args, bb):
 		ph = fec.PacketHandler(args.key)
 
 	while continuous:
-		bytes = args.packet.decode("hex")
-		colorize("blue", "{0:03} {1:.2f} TX ({2}) '{3}'".format(tx_count, time.time(), len(bytes), bytes.encode("hex")))
-		if args.encode:
-			bytes = ph.frame(bytes)
-
-		if args.verbose:
-			print("Transmit data:")
-			print(ph.hexdump(bytes))
-
-		bb.transmit(bytes)
-		tx_count += 1
-		if args.wait_reply:
-			data, rssi, freq = bb.receive()
-			if data is None:
-				colorize("yellow", "Timeout while waiting for reply")
-			else:
-				bit_corr = 0
-				byte_corr = 0
+		for i in range(0, args.number):
+			for packet in args.packet:
+				bytes = packet.decode("hex")
+				colorize("blue", "{0:03} {1:.2f} TX ({2}) '{3}'".format(tx_count, time.time(), len(bytes), bytes.encode("hex")))
+				if args.encode:
+					bytes = ph.frame(bytes)
 
 				if args.verbose:
-					print("Receive data:")
-					print(ph.hexdump(data))
+					print("Transmit data:")
+					print(ph.hexdump(bytes))
 
-				if args.decode:
-					try:
-						data, bit_corr, byte_corr = ph.deframe(data)
-					except:
-						byte_corr = -1
-				
-				color = "red" if byte_corr == -1 else "yellow" if bit_corr or byte_corr else "green"
+				bb.transmit(bytes)
+				tx_count += 1
+				if args.wait_reply:
+					data, rssi, freq = bb.receive()
+					if data is None:
+						colorize("yellow", "Timeout while waiting for reply")
+					else:
+						bit_corr = 0
+						byte_corr = 0
 
-				colorize(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+5d} Hz ({6:03}) '{7}'".format(rx_count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
-				rx_count += 1
+						if args.verbose:
+							print("Receive data:")
+							print(ph.hexdump(data))
 
-		continuous = args.continuous
-		time.sleep(args.switch/1000.0)
+						if args.decode:
+							try:
+								data, bit_corr, byte_corr = ph.deframe(data)
+							except:
+								byte_corr = -1
+
+						color = "red" if byte_corr == -1 else "yellow" if bit_corr or byte_corr else "green"
+
+						colorize(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+5d} Hz ({6:03}) '{7}'".format(rx_count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
+						rx_count += 1
+
+				continuous = args.continuous
+				time.sleep(args.switch/1000.0)
 
 testmode_desc = """
 This command puts the BlueBox in testmode and transmits a test signal.
@@ -308,12 +323,20 @@ def training(args, bb):
 		print(bb.get_training())
 
 @subcommand("get or set device power level")
-@argument('power', type=int, help="power level (ADF702x PA setting, not in dBm!)", nargs="?", default=None)
+@argument('power', type=parse_power, help="power level 0-63 (ADF702x PA setting, not in dBm!)", nargs="?", default=None)
 def power(args, bb):
 	if args.power is not None:
 		bb.set_power(args.power)
 	else:
 		print(bb.get_power())
+
+@subcommand("get or set device CSMA level in dBm")
+@argument('level', type=int, help="CSMA level in dBm", nargs="?", default=None)
+def csma(args, bb):
+	if args.level is not None:
+		bb.set_csma(args.level)
+	else:
+		print(bb.get_csma())
 
 @subcommand("basic spectrum analysis")
 @argument("-c", metavar="center", dest="center", type=parse_frequency, help="center frequency in Hz", default=str(437.45e6))
@@ -365,6 +388,35 @@ def help(args, parser):
 	else:
 		parser.print_help()
 
+@subcommand("list all connected BlueBoxes")
+def list(args):
+	index = 0
+
+	header = "Index  USB path  Type   Frequency  Bitrate  Modindex  Power"
+	fields = "{0}      {1:03}:{2:03}   {3:5}  {4:9} {5:5}    {6:2}        {7:2}"
+
+	while True:
+		try:
+			bb = bluebox.Bluebox(index=index)
+			if index == 0:
+				print(header)
+			print(fields.format(
+				index,
+				bb.dev.bus,
+				bb.dev.address,
+				bb.serial,
+				bb.get_frequency(),
+				bb.get_bitrate(),
+				bb.get_modindex(),
+				bb.get_power()))
+		except Exception as e:
+			if index == 0:
+				print("Error: no BlueBox found")
+			break
+		finally:
+			index += 1
+
+
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):
 		parts = super(argparse.RawDescriptionHelpFormatter, self)._format_action(action)
@@ -387,11 +439,13 @@ For more information see http://www.satlab.org or http://github.com/satlab
 epilog="See '%(prog)s help <command>' for more information on a specific command."
 
 def main():
+	global enable_colors
 	parser = argparse.ArgumentParser(description=desc, epilog=epilog, formatter_class=SubcommandHelpFormatter)
-	parser.add_argument("-d", metavar="<device>", default=None, help="select specific BlueBox device")
+	parser.add_argument("-i", metavar="<index>", dest="index", default=0, type=int, help="select specific BlueBox device")
 	parser.add_argument("-t", metavar="<timeout>", dest="timeout", type=int, default=10000, help="set transfer timeout in ms")
 	parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose output")
 	parser.add_argument("-w", "--wait", action="store_true", help="wait for device if not connected")
+	parser.add_argument("-c", "--no-color", action="store_false", dest="color", help="disable color output")
 	subparsers = parser.add_subparsers(dest="subparser", title="The available subcommands are", metavar="<command>")
 
 	for sub in sorted(subcommands):
@@ -418,8 +472,14 @@ def main():
 		args.func(args, parser)
 		sys.exit(0)
 
+	if args.func == list:
+		args.func(args)
+		sys.exit(0)
+
+	enable_colors = args.color
+
 	try:
-		bb = bluebox.Bluebox(wait=args.wait, timeout=args.timeout)
+		bb = bluebox.Bluebox(index=args.index, wait=args.wait, timeout=args.timeout)
 	except KeyboardInterrupt:
 		print()
 		sys.exit(0)

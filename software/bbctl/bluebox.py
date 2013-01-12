@@ -231,11 +231,16 @@ class Bluebox(object):
 
 	def rssi(self):
 		gain_correction = (86, 0, 0, 0, 58, 38, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-		rb = self.reg_read(self.READBACK_RSSI)
-		rssi = rb & 0x7f
-		gc = (rb & 0x780) >> 7
-		dbm = ((rssi + gain_correction[gc]) * 0.5) - 130;
-		return int(round(dbm))
+
+		acc = 0.0
+		for i in range(0, 10):
+			rb = self.reg_read(self.READBACK_RSSI)
+			rssi = rb & 0x7f
+			gc = (rb & 0x780) >> 7
+			dbm = ((rssi + gain_correction[gc]) * 0.5) - 130;
+			acc += dbm
+		acc = acc / 10
+		return int(round(acc))
 
 	def testmode(self, mode):
 		self.reg_write(self.REGISTER_TESTMODE, mode << 8)

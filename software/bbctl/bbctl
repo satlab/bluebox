@@ -155,7 +155,7 @@ def signal(args, bb):
 
 @subcommand("receive packets and print to screen")
 @argument('-d', '--decode', dest="decode", help="decode packets", action='store_true', default=False)
-@argument('-k', '--key', dest="key", help="HMAC key", default=None)
+@argument('-k', '--key', dest="key", help="HMAC-SHA1 key", default=None)
 @argument('-r', '--retransmit', dest="retransmit", help="Enable retransmission of received data", action='store_true')
 def receive(args, bb):
 	count = 0
@@ -192,7 +192,7 @@ def receive(args, bb):
 @argument('-r', '--wait-reply', dest="wait_reply", help="wait for reply", action='store_true', default=False)
 @argument('-e', '--encode', dest="encode", help="encode packets", action='store_true', default=False)
 @argument('-d', '--decode', dest="decode", help="decode packets", action='store_true', default=False)
-@argument('-k', '--key', dest="key", help="HMAC key", default=None)
+@argument('-k', '--key', dest="key", help="HMAC-SHA1 key", default=None)
 @argument('-c', '--continuous', dest="continuous", help="Continuously send data", action="store_true")
 @argument('-s', '--switch', dest="switch", metavar="MS", help="Switching time in ms", type=int, default=0)
 @argument('-n', '--number', dest="number", help="Repeat transmission NUMBER times", type=int, default=1)
@@ -400,8 +400,8 @@ def help(args, parser):
 def list(args):
 	index = 0
 
-	header = "Index  USB path  Frequency  Bitrate  Modindex  Power  Training  Transmit  Receive"
-	fields = "{0:<5}  {1:<03}:{2:<03}   {3:<9}  {4:<7}  {5:<8}  {6:<5}  {7:<8}  {8:<8}  {9:<7}"
+	header = "Index  USB path  Frequency  Bitrate  Modindex  Power  Train  Transmit  Receive"
+	fields = "{0:<5}  {1:<03}:{2:<03}   {3:<9}  {4:<7}  {5:<8}  {6:<5}  {7:<5}  {8:<8}  {9:<7}"
 
 	while True:
 		try:

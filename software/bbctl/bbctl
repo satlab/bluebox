@@ -156,6 +156,7 @@ def signal(args, bb):
 @subcommand("receive packets and print to screen")
 @argument('-d', '--decode', dest="decode", help="decode packets", action='store_true', default=False)
 @argument('-k', '--key', dest="key", help="HMAC key", default=None)
+@argument('-r', '--retransmit', dest="retransmit", help="Enable retransmission of received data", action='store_true')
 def receive(args, bb):
 	count = 0
 	if args.decode:
@@ -178,6 +179,13 @@ def receive(args, bb):
 		color = "red" if byte_corr == -1 else "yellow" if bit_corr or byte_corr else "green"
 		colorize(color, "{0:03} {1:.2f} RX ({2:03d}/{3:03d}) {4:4} dBm {5:+5d} Hz ({6:03}) '{7}'".format(count, time.time(), bit_corr, byte_corr, rssi, freq, len(data), data.encode("hex")))
 		count += 1
+
+		if byte_corr == 0 and args.retransmit:
+			bytes = data
+			colorize("blue", "{0:03} {1:.2f} TX ({2}) '{3}'".format(count, time.time(), len(bytes), bytes.encode("hex")))
+			if args.decode:
+				bytes = ph.frame(bytes)
+			bb.transmit(bytes)
 
 @subcommand("transmit packet data")
 @argument('packet', help="packet hex string to transmit", nargs="+")

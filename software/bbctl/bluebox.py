@@ -108,7 +108,7 @@ class Bluebox(object):
 	# Data length and format
 	DATALEN 		= 501
 	DATAEPSIZE		= 512
-	DATAFMT			= "<HHhhBB{0}s".format(DATALEN)
+	DATAFMT			= "<HHhhBH{0}s".format(DATALEN)
 	
 	def __init__(self, index=0, wait=False, timeout=0):
 		self.timeout = timeout

@@ -102,6 +102,15 @@ def parse_power(s):
 
 	return power
 
+def bar(value, minimum=-130, maximum=-47, width=40):
+	value = max(value, minimum)
+	value = min(value, maximum)
+
+	progress = (value+abs(minimum))*width/(maximum+abs(minimum))
+	bar = "[" + progress * "#" + (width-progress) * " " + "]"
+
+	return bar
+
 @subcommand("set device in DFU mode")
 def dfu(args, bb):
 	bb.dfu()
@@ -126,6 +135,7 @@ def rssi(args, bb):
 	print("{0} dBm".format(rssi))
 
 @subcommand("continuously show RSSI reading")
+@argument("-t", metavar="samples", dest="samples", type=int, help="number of samples per frequency", default=10)
 def signal(args, bb):
 	minimum = -130
 	maximum = -47
@@ -133,17 +143,8 @@ def signal(args, bb):
 
 	while True:
 		try:
-			rssi = bb.rssi()
-			if rssi < minimum:
-				rssi = minimum
-			if rssi > maximum:
-				rssi = maximum
-
-			progress = (rssi+abs(minimum))*width/(maximum+abs(minimum))
-
-			bar = "[" + progress * "#" + (width-progress) * " " + "]"
-
-			sys.stdout.write("\r{0} {1} dBm ".format(bar, rssi))
+			rssi = bb.rssi(args.samples)
+			sys.stdout.write("\r{0} {1} dBm ".format(bar(rssi), rssi))
 			sys.stdout.flush()
 			time.sleep(0.1)
 		except KeyboardInterrupt:
@@ -308,8 +309,14 @@ def frequency(args, bb):
 
 @subcommand("get or set device bitrate")
 @argument('bitrate', type=int, help="requested bitrate", nargs="?", default=None)
+@argument("-m", "--automod", action="store_true", help="Automatically adjust modulation index")
 def bitrate(args, bb):
 	if args.bitrate is not None:
+		if args.automod:
+			oldbit = bb.get_bitrate()
+			oldmod = bb.get_modindex()
+			mod = max(oldmod * oldbit/args.bitrate, 1)
+			bb.set_modindex(mod)
 		bb.set_bitrate(args.bitrate)
 	else:
 		print(bb.get_bitrate())
@@ -350,7 +357,10 @@ def csma(args, bb):
 @argument("-c", metavar="center", dest="center", type=parse_frequency, help="center frequency in Hz", default=str(437.45e6))
 @argument("-s", metavar="span", dest="span", type=parse_frequency, help="frequency span in Hz", default=str(5e3))
 @argument("-b", metavar="bins", dest="bins", type=int, help="number of bins to divide span in", default=10)
+@argument("-t", metavar="samples", dest="samples", type=int, help="number of samples per frequency", default=10)
 def spectrum(args, bb):
+	import curses
+
 	center = args.center
 	span = args.span
 	bins = args.bins
@@ -358,29 +368,38 @@ def spectrum(args, bb):
 	if center - span < 0:
 		raise Exception("Invalid span")
 
-	print("showing spectrum from {0} Hz to {1} Hz in {2} bins".format(
-					center-span//2, center+span//2, bins))
+	stdscr = curses.initscr()
+	curses.noecho()
+	curses.cbreak()
+	stdscr.nodelay(1)
+	curses.curs_set(0)
 
-	orig_freq = bb.get_frequency()
-	for freq in range(center - span//2, center + span//2+1, span//bins):
-		bb.set_frequency(freq)
-		rssi = bb.rssi()
-		print("{0}: {1} dBm".format(freq, rssi))
-	bb.set_frequency(orig_freq)
+	while True:
+		try:
+			stdscr.erase()
+			stdscr.addstr("showing spectrum from {0} Hz to {1} Hz in {2} bins\n\n".format(
+								center-span//2, center+span//2, bins))
+			orig_freq = bb.get_frequency()
+			for freq in range(center - span//2, center + span//2+1, span//bins):
+				bb.set_frequency(freq)
+				rssi = bb.rssi(args.samples)
+				stdscr.addstr("{0}: {1} {2} dBm\n".format(freq, bar(rssi), rssi))
+			bb.set_frequency(orig_freq)
+			stdscr.refresh()
+		except KeyboardInterrupt:
+			break
+		except Exception as e:
+			print(e)
+			break
+		finally:
+			if stdscr.getch() >= 0:
+				break
 
-@subcommand("show current configuration")
-def config(args, bb):
-	frequency    = bb.get_frequency()
-	modindex     = bb.get_modindex()
-	training     = bb.get_training()
-	bitrate      = bb.get_bitrate()
-	received     = bb.get_received()
-	transmitted  = bb.get_transmitted()
-
-	print("Frequency:        {0:.3f} MHz".format(frequency/1.0e6))
-	print("Modulation Index: {0}".format(modindex))
-	print("Bitrate:          {0} bps".format(bitrate))
-	print("Training bytes:   {0} bytes".format(training))
+	curses.curs_set(1)
+	curses.nocbreak();
+	stdscr.keypad(0);
+	curses.echo()
+	curses.endwin()
 
 @subcommand("set ADF7021 register")
 @argument("register", type=parse_int, help="register number to write")

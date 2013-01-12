@@ -323,7 +323,7 @@ def modindex(args, bb):
 		print(bb.get_modindex())
 
 @subcommand("get or set device training sequence")
-@argument('length', type=int, help="training sequence length in bytes", nargs="?", default=None)
+@argument('length', type=int, help="training sequence length in ms", nargs="?", default=None)
 def training(args, bb):
 	if args.length is not None:
 		bb.set_training(args.length)
@@ -375,7 +375,7 @@ def config(args, bb):
 	training     = bb.get_training()
 	bitrate      = bb.get_bitrate()
 	received     = bb.get_received()
-	transmitted  = bb_get_transmitted()
+	transmitted  = bb.get_transmitted()
 
 	print("Frequency:        {0:.3f} MHz".format(frequency/1.0e6))
 	print("Modulation Index: {0}".format(modindex))
@@ -396,12 +396,12 @@ def help(args, parser):
 	else:
 		parser.print_help()
 
-@subcommand("list all connected BlueBoxes")
+@subcommand("list all connected devices with status")
 def list(args):
 	index = 0
 
-	header = "Index  USB path  Type   Frequency  Bitrate  Modindex  Power"
-	fields = "{0}      {1:03}:{2:03}   {3:5}  {4:9} {5:5}    {6:2}        {7:2}"
+	header = "Index  USB path  Frequency  Bitrate  Modindex  Power  Training  Transmit  Receive"
+	fields = "{0:<5}  {1:<03}:{2:<03}   {3:<9}  {4:<7}  {5:<8}  {6:<5}  {7:<8}  {8:<8}  {9:<7}"
 
 	while True:
 		try:
@@ -412,11 +412,13 @@ def list(args):
 				index,
 				bb.dev.bus,
 				bb.dev.address,
-				bb.serial,
 				bb.get_frequency(),
 				bb.get_bitrate(),
 				bb.get_modindex(),
-				bb.get_power()))
+				bb.get_power(),
+				bb.get_training(),
+				bb.get_transmitted(),
+				bb.get_received()))
 		except Exception as e:
 			if index == 0:
 				print("Error: no BlueBox found")

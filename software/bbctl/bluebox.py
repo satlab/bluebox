@@ -56,6 +56,8 @@ class Bluebox(object):
 	REQUEST_SYNCWORD	= 0x09
 	REQUEST_RXTX_MODE	= 0x0A
 	REQUEST_BITRATE		= 0x0B
+	REQUEST_TX		= 0x0C
+	REQUEST_RX		= 0x0D
 
 	# Bootloader Control
 	REQUEST_RESET		= 0xFE
@@ -104,7 +106,7 @@ class Bluebox(object):
 	SW_TOLERANCE_3BER	= 3
 
 	# Data length and format
-	DATALEN 		= 502
+	DATALEN 		= 501
 	DATAEPSIZE		= 512
 	DATAFMT			= "<HHhhBB{0}s".format(DATALEN)
 	
@@ -208,12 +210,12 @@ class Bluebox(object):
 		return level
 
 	def set_training(self, training):
-		training = struct.pack("<B", training)
+		training = struct.pack("<H", training)
 		self._ctrl_write(self.REQUEST_TRAINING, training)
 
 	def get_training(self):
-		training = self._ctrl_read(self.REQUEST_TRAINING, 1)
-		training = struct.unpack("<B", training)[0]
+		training = self._ctrl_read(self.REQUEST_TRAINING, 2)
+		training = struct.unpack("<H", training)[0]
 		return training
 
 	def set_training_ms(self, ms):
@@ -252,10 +254,14 @@ class Bluebox(object):
 		self._ctrl_write(self.REQUEST_RXTX_MODE, None, wValue=0)
 
 	def get_received(self):
-		return 0
+		rx = self._ctrl_read(self.REQUEST_RX, 4)
+		rx = struct.unpack("<I", rx)[0]
+		return rx
 
 	def get_transmitted(self):
-		return 0
+		tx = self._ctrl_read(self.REQUEST_TX, 4)
+		tx = struct.unpack("<I", tx)[0]
+		return tx
 
 	def dfu(self):
 		try: self._ctrl_write(self.REQUEST_DFU, None, 0)

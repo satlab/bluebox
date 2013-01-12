@@ -133,7 +133,7 @@ void spi_tx_start(void)
 	preamble[CALLSIGN_LENGTH] = tx_frame_fsm(data[front].size);
 
 	data[front].progress = 0;
-	data[front].training = conf.training_bytes;
+	data[front].training = training_ms_to_bytes(conf.training_ms, conf.bitrate);
 	
 	spi_enable();
 	spi_enable_it();
@@ -216,9 +216,11 @@ ISR(SPI_STC_vect)
 		}
 
 		if (data[front].progress > (data[front].size + CALLSIGN_LENGTH + FSM_LENGTH)) {
+			conf.tx++;
 			if (data[back].flags & FLAG_TX_READY) {
 				flip_tx_buffers();
 				spi_tx_start();
+				data[front].training = training_ms_to_bytes(conf.training_inter_ms, conf.bitrate);
 			} else {
 				spi_tx_done();
 				adf_set_rx_mode();
@@ -250,6 +252,7 @@ ISR(SPI_STC_vect)
 		}
 
 		if (data[front].progress >= data[front].size) {
+			conf.rx++;
 			spi_rx_done();
 			flip_rx_buffers();
 			adf_set_threshold_free();

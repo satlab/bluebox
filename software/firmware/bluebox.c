@@ -59,8 +59,11 @@ struct bluebox_config conf = {
 	.do_rs = true,
 	.do_viterbi = true,
 	.callsign = CALLSIGN,
-	.training_bytes = TRAINING_BYTES,
+	.training_ms = TRAINING_MS,
+	.training_inter_ms = TRAINING_INTER_MS,
 	.training_symbol = TRAINING_SYMBOL,
+	.tx = 0,
+	.rx = 0,
 };
 
 static void setup_hardware(void)
@@ -157,7 +160,7 @@ static void do_ifbw(int direction, unsigned int vWalue)
 
 static void do_training(int direction, unsigned int vWalue)
 {
-	rf_config_single(uint8_t, training_bytes);
+	rf_config_single(uint16_t, training_ms);
 }
 
 static void do_syncword(int direction, unsigned int vWalue)
@@ -168,6 +171,16 @@ static void do_syncword(int direction, unsigned int vWalue)
 static void do_bitrate(int direction, unsigned int vWalue)
 {
 	rf_config_single(uint16_t, bitrate);
+}
+
+static void do_tx(int direction, unsigned int vWalue)
+{
+	rf_config_single(uint32_t, tx);
+}
+
+static void do_rx(int direction, unsigned int vWalue)
+{
+	rf_config_single(uint32_t, rx);
 }
 
 static void do_control_request(int direction)
@@ -205,6 +218,12 @@ static void do_control_request(int direction)
 		break;
 	case REQUEST_BITRATE:
 		do_bitrate(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_TX:
+		do_tx(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_RX:
+		do_rx(direction, USB_ControlRequest.wValue);
 		break;
 	case REQUEST_RESET:
 		reboot();

@@ -47,7 +47,8 @@
 #define	REQUEST_SYNCWORD	0x09
 #define	REQUEST_RXTX_MODE	0x0A
 #define REQUEST_BITRATE		0x0B
-#define REQUEST_DATA		0x0C
+#define REQUEST_TX		0x0C
+#define REQUEST_RX		0x0D
 #define REQUEST_RESET		0xFE
 #define REQUEST_DFU		0xFF
 
@@ -72,7 +73,8 @@
 #define SYNC_WORD_TOLERANCE	ADF_SYNC_WORD_ERROR_TOLERANCE_3
 #define SYNC_WORD_BITS		ADF_SYNC_WORD_LEN_24
 #define TRAINING_SYMBOL		0x55
-#define TRAINING_BYTES		16
+#define TRAINING_MS		200
+#define TRAINING_INTER_MS	200
 
 /* AAUSAT3 packet format */
 #define CALLSIGN		"OZ3CUB"
@@ -93,7 +95,7 @@
 
 /* Buffer configuration */
 #define TOTAL_LENGTH		512
-#define DATA_LENGTH		(TOTAL_LENGTH - sizeof(uint16_t) * 4 - sizeof(uint8_t) * 2)
+#define DATA_LENGTH		(TOTAL_LENGTH - sizeof(uint16_t) * 5 - sizeof(uint8_t) * 1)
 #define NUM_BUFS		2
 
 /* This must be 512 bytes */
@@ -103,7 +105,7 @@ struct data_buffer {
 	int16_t rssi;
 	int16_t freq;
 	uint8_t flags;
-	uint8_t training;
+	uint16_t training;
 	uint8_t data[DATA_LENGTH];
 };
 
@@ -127,8 +129,11 @@ struct bluebox_config {
 	uint8_t do_rs;
 	uint8_t do_viterbi;
 	uint8_t training_symbol;
-	uint8_t training_bytes;
+	uint16_t training_ms;
+	uint16_t training_inter_ms;
 	char callsign[CALLSIGN_LENGTH];
+	uint32_t tx;
+	uint32_t rx;
 };
 
 extern struct bluebox_config conf;
@@ -146,6 +151,11 @@ static inline void reboot(void)
 {
 	wdt_enable(WDTO_15MS);
 	while (1);
+}
+
+static inline __attribute__ ((pure)) uint16_t training_ms_to_bytes(uint32_t ms, uint32_t bitrate)
+{
+	return (ms * bitrate) / 1000 / BITS_PER_BYTE;
 }
 
 #endif /* _BLUEBOX_H_ */

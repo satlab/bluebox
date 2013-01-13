@@ -220,7 +220,6 @@ ISR(SPI_STC_vect)
 			if (data[back].flags & FLAG_TX_READY) {
 				flip_tx_buffers();
 				spi_tx_start();
-				data[front].training = training_ms_to_bytes(conf.training_inter_ms, conf.bitrate);
 			} else {
 				spi_tx_done();
 				adf_set_rx_mode();

@@ -146,10 +146,32 @@ static void do_power(int direction, unsigned int vWalue)
 {
 	rf_config_single(uint8_t, pa_setting);
 }
+
+struct afc_request {
+	uint8_t state;
+	uint8_t range;
+	uint8_t p;
+	uint8_t i;
+} __attribute__ ((packed));
 	
 static void do_acf(int direction, unsigned int vWalue)
 {
-	rf_config_single(uint8_t, afc_enable);
+	struct afc_request req;
+
+	if (direction == ENDPOINT_DIR_OUT) {
+		Endpoint_Read_Control_Stream_LE(&req, sizeof(req));
+		conf.afc_enable = !!req.state;
+		conf.afc_range = req.range ? req.range : conf.afc_range;
+		conf.afc_kp = req.p ? req.p : conf.afc_kp;
+		conf.afc_ki = req.i ? req.i : conf.afc_ki;
+		adf_configure();
+	} else if (direction == ENDPOINT_DIR_IN) {
+		req.state = conf.afc_enable;
+		req.range = conf.afc_range;
+		req.p = conf.afc_kp;
+		req.i = conf.afc_ki;
+		Endpoint_Write_Control_Stream_LE(&req, sizeof(req));
+	}
 }
 
 static void do_ifbw(int direction, unsigned int vWalue)

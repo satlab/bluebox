@@ -20,7 +20,7 @@ OPTIMIZATION = s
 TARGET       = bluebox
 SRC          = $(TARGET).c Descriptors.c bootloader.c spi.c adf7021.c $(LUFA_SRC_USB) $(LUFA_SRC_USBCLASS)
 LUFA_PATH    = LUFA
-CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -IConfig/
+CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -IConfig/ -Wall -Wextra -Wno-unused-parameter
 LD_FLAGS     =
 
 # Default target

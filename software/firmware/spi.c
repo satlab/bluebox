@@ -87,7 +87,7 @@ static inline __attribute__ ((pure)) int rx_frame_spi_length(uint8_t type)
 	return bytes;
 }
 
-static inline __attribute__ ((pure)) int tx_frame_fsm(unsigned int data)
+static inline __attribute__ ((pure)) int tx_frame_fsm(int data)
 {
 	int short_frame_limit = SHORT_FRAME_LIMIT + CSP_OVERHEAD;
 

@@ -292,17 +292,19 @@ class Bluebox(object):
 		try: self._ctrl_write(self.REQUEST_RESET, None, 0)
 		except: pass
 
-	def transmit(self, text):
+	def transmit(self, text, timeout=None):
+		if not timeout:
+			timeout = self.timeout
 		if len(text) > self.DATALEN:
 			raise Exception("Data too long")
 		data = struct.pack(self.DATAFMT, len(text), 0, 0, 0, 0, 0, text)
-		self.dev.write(self.DATA_OUT, data, timeout=self.timeout)
+		self.dev.write(self.DATA_OUT, data, timeout=timeout)
 
-	def receive(self, timeout=-1):
-		if timeout == -1:
+	def receive(self, timeout=None):
+		if not timeout:
 			timeout = self.timeout
 		try:
-			ret = self.dev.read(self.DATA_IN, self.DATAEPSIZE, 0, timeout=self.timeout)
+			ret = self.dev.read(self.DATA_IN, self.DATAEPSIZE, 0, timeout=timeout)
 			size, progress, rssi, freq, flags, training, data = struct.unpack(self.DATAFMT, ret)
 			data = data[0:size]
 		except KeyboardInterrupt:

@@ -102,6 +102,18 @@ def parse_power(s):
 
 	return power
 
+def parse_state(s):
+	s = s.lower()
+
+	if s in ("on", "enable", "1"):
+		state = True
+	elif s in ("off", "disable", "0"):
+		state = False
+	else:
+		raise argparse.ArgumentTypeError("invalid state")
+
+	return state
+
 def bar(value, minimum=-130, maximum=-47, width=40):
 	value = max(value, minimum)
 	value = min(value, maximum)
@@ -352,6 +364,18 @@ def csma(args, bb):
 		bb.set_csma(args.level)
 	else:
 		print(bb.get_csma())
+
+@subcommand("enable or disable AFC")
+@argument("state", help="on/off", type=parse_state, nargs="?", default=None)
+@argument("-r", help="AFC range", type=int, default=0)
+@argument("-p", help="AFC Kp", type=int, default=0)
+@argument("-i", help="AFC Ki", type=int, default=0)
+def afc(args, bb):
+	if args.state is not None:
+		bb.set_afc(args.state, args.r, args.p, args.i)
+	else:
+		state, r, p, i = bb.get_afc()
+		print("afc: {0}, range: {1}, Kp: {2}, Ki: {3}".format("on" if state else "off", r, p, i))
 
 @subcommand("basic spectrum analysis")
 @argument("-c", metavar="center", dest="center", type=parse_frequency, help="center frequency in Hz", default=str(437.45e6))

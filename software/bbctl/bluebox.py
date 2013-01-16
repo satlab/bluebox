@@ -209,6 +209,15 @@ class Bluebox(object):
 		level = struct.unpack("<h", level)[0]
 		return level
 
+	def set_afc(self, state, r, p, i):
+		afc = struct.pack("<BBBB", int(state), r, p, i)
+		self._ctrl_write(self.REQUEST_AFC, afc)
+
+	def get_afc(self):
+		afc = self._ctrl_read(self.REQUEST_AFC, 4)
+		state, r, p, i = struct.unpack("<BBBB", afc)
+		return bool(state), r, p, i
+
 	def set_training(self, training):
 		training = struct.pack("<H", training)
 		self._ctrl_write(self.REQUEST_TRAINING, training)

@@ -245,9 +245,8 @@ static bool csma_tx_allowed(void)
 
 	rssi = adf_readback_rssi();
 
-	if (rssi > conf.csma_rssi) {
+	if (rssi > conf.csma_rssi)
 		quarantine = 100;
-	}
 
 	return (rssi <= conf.csma_rssi);
 }
@@ -258,7 +257,7 @@ static void bluebox_task(void)
 		return;
 
 	Endpoint_SelectEndpoint(OUT_EPADDR);
-	if (Endpoint_IsOUTReceived() && csma_tx_allowed() && spi_tx_allowed()) {
+	if (Endpoint_IsOUTReceived() && csma_tx_allowed() && spi_tx_prepare()) {
 		if (Endpoint_IsReadWriteAllowed()) {
 			if (!(data[front].flags & FLAG_TX_READY)) {
 				Endpoint_Read_Stream_LE(&data[front], sizeof(data[front]), NULL);
@@ -309,8 +308,8 @@ int main(void)
 	swd_enable();
 
 	for (;;) {
-		bluebox_task();
 		spi_rx_task();
+		bluebox_task();
 		USB_USBTask();
 	}
 }

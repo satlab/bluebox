@@ -149,19 +149,28 @@ void spi_tx_done(void)
 	spi_mode = SPI_MODE_IDLE;
 }
 
-bool spi_tx_allowed(void)
+bool spi_tx_prepare(void)
 {
-	swd_disable();
+	bool allow = false;
 
+	cli();
+
+	/* Do not allow TX if we're receiving a frame */
 	if (spi_mode == SPI_MODE_RX)
-		return false;
+		goto out;
 
+	/* Do not allow TX if we're transmitting a frame
+	 * and already have a new frame queued up */
 	if ((spi_mode == SPI_MODE_TX) && (data[back].flags & FLAG_TX_READY))
-		return false;
+		goto out;
 
+	swd_disable();
 	spi_mode = SPI_MODE_TX;
+	allow = true;
 
-	return true;
+out:
+	sei();
+	return allow;
 }
 
 void spi_rx_task(void)

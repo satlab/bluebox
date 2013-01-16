@@ -31,7 +31,6 @@
 #include <util/delay.h>
 
 #include "adf7021.h"
-#include "config.h"
 #include "bluebox.h"
 #include "ptt.h"
 #include "led.h"

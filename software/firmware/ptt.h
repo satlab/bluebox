@@ -2,7 +2,6 @@
 #define _PTT_H_
 
 #include <avr/io.h>
-#include "config.h"
 
 /* RF control pins */
 #define PORT_RF_CONTROL		PORTD

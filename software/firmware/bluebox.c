@@ -24,7 +24,6 @@
 #include <stdbool.h>
 #include <errno.h>
 
-#include "config.h"
 #include "bluebox.h"
 #include "adf7021.h"
 #include "bootloader.h"

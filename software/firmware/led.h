@@ -2,7 +2,6 @@
 #define _LED_H_
 
 #include <avr/io.h>
-#include "config.h"
 
 /* LED numbers */
 #define LED_POWER		0x01

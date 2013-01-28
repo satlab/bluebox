@@ -349,7 +349,7 @@ void adf_afc_on(unsigned char range, unsigned char ki, unsigned char kp)
 {
 	/* write R10, turn AFC on */
 	sys_conf.r10.afc_en = 1;
-	sys_conf.r10.afc_scaling_factor = 431; /* (2^24 * 500 / XTAL_FREQ) */
+	sys_conf.r10.afc_scaling_factor = 524; /* (2^24 * 500 / XTAL_FREQ) */
 	sys_conf.r10.ki = ki;
 	sys_conf.r10.kp = kp;
 	sys_conf.r10.afc_range = range;

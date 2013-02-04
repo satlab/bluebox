@@ -313,8 +313,8 @@ class Bluebox(object):
 		except: pass
 
 	def get_fwrevision(self):
-		fwrev = self._ctrl_read(self.REQUEST_FWREVISION, 7)
-		fwrev = struct.unpack("<7s", fwrev)[0]
+		fwrev = self._ctrl_read(self.REQUEST_FWREVISION, 8)
+		fwrev = struct.unpack("<8s", fwrev)[0]
 		return fwrev
 
 	def transmit(self, text, timeout=None):

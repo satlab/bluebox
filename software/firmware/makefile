@@ -22,7 +22,7 @@ LUFA_PATH    = LUFA
 CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -IConfig/ -Wall -Wextra -Wno-unused-parameter
 LD_FLAGS     =
 
-CC_FLAGS    += -DFW_REVISION="\"$(shell git rev-parse HEAD | egrep -o "^[[:xdigit:]]{7}")\""
+CC_FLAGS    += -DFW_REVISION="\"$(shell git describe --abbrev=7 --dirty=+ --always)\""
 
 # Default target
 all:

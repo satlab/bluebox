@@ -114,6 +114,14 @@ def parse_state(s):
 
 	return state
 
+def parse_serial(s):
+	try:
+		serial = int(s, 16)
+	except:
+		raise argparse.ArgumentTypeError("{0} is not a valid serial number".format(s))
+
+	return serial
+
 def bar(value, minimum=-130, maximum=-47, width=40):
 	value = max(value, minimum)
 	value = min(value, maximum)
@@ -431,6 +439,15 @@ def spectrum(args, bb):
 def register(args, bb):
 	bb.reg_write(args.register, (args.value << 8))
 
+@subcommand("set or get device serial number")
+@argument("serial", help="new serial number", type=parse_serial, nargs="?", default=None)
+def serial(args, bb):
+	if args.serial is not None:
+		bb.set_serialnumber(args.serial)
+	else:
+		serial = bb.get_serialnumber()
+		print("{0:08x}".format(serial))
+
 @subcommand("show detailed help for subcommand")
 @argument('command', help="detailed help command", nargs="?", default=None)
 def help(args, parser):
@@ -443,8 +460,8 @@ def help(args, parser):
 def list(args):
 	index = 0
 
-	header = "Index  USB path  Frequency  Bitrate  Modindex  Power  Train  Transmit  Receive"
-	fields = "{0:<5}  {1:<03}:{2:<03}   {3:<9}  {4:<7}  {5:<8}  {6:<5}  {7:<5}  {8:<8}  {9:<7}"
+	header = "Index  USB path  Frequency  Bitrate  Modindex  Power  Train  Transmit  Receive  Firmware  Serial"
+	fields = "{0:<5}  {1:<03}:{2:<03}   {3:<9}  {4:<7}  {5:<8}  {6:<5}  {7:<5}  {8:<8}  {9:<7}  {10:<8}  {11:08x}"
 
 	while True:
 		try:
@@ -461,7 +478,9 @@ def list(args):
 				bb.get_power(),
 				bb.get_training(),
 				bb.get_transmitted(),
-				bb.get_received()))
+				bb.get_received(),
+				bb.get_fwrevision(),
+				bb.get_serialnumber()))
 		except Exception as e:
 			if index == 0:
 				print("Error: no BlueBox found")

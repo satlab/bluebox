@@ -60,6 +60,8 @@ class Bluebox(object):
 	REQUEST_RX		= 0x0D
 
 	# Bootloader Control
+	REQUEST_SERIALNUMBER	= 0xFC
+	REQUEST_FWREVISION	= 0xFD
 	REQUEST_RESET		= 0xFE
 	REQUEST_DFU		= 0xFF
 
@@ -237,6 +239,15 @@ class Bluebox(object):
 		trainbytes = self.get_training()
 		return (trainbytes * 8 * 1000) / bitrate
 
+	def set_serialnumber(self, serial):
+		serial = struct.pack("<I", serial)
+		self._ctrl_write(self.REQUEST_SERIALNUMBER, serial)
+
+	def get_serialnumber(self):
+		serial = self._ctrl_read(self.REQUEST_SERIALNUMBER, 4)
+		serial = struct.unpack("<I", serial)[0]
+		return serial
+
 	def version(self):
 		return self.reg_read(self.READBACK_VERSION)
 
@@ -300,6 +311,11 @@ class Bluebox(object):
 	def reset(self):
 		try: self._ctrl_write(self.REQUEST_RESET, None, 0)
 		except: pass
+
+	def get_fwrevision(self):
+		fwrev = self._ctrl_read(self.REQUEST_FWREVISION, 7)
+		fwrev = struct.unpack("<7s", fwrev)[0]
+		return fwrev
 
 	def transmit(self, text, timeout=None):
 		if not timeout:

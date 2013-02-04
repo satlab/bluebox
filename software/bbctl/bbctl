@@ -135,10 +135,10 @@ def bar(value, minimum=-130, maximum=-47, width=40):
 def dfu(args, bb):
 	bb.dfu()
 
-@subcommand("update device firmware")
+@subcommand("flash device firmware")
 @argument('filename', help="firmware file to flash")
-def update(args, bb):
-	bb.update(args.filename)
+def flash(args, bb):
+	bb.flash(args.filename)
 
 @subcommand("reset BlueBox")
 def reset(args, bb):

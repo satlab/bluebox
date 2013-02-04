@@ -293,7 +293,7 @@ class Bluebox(object):
 		if self.dev is None:
 			raise Exception("Failed to set device in DFU mode")
 
-	def update(self, filename):
+	def flash(self, filename):
 		self.dfu()
 
 		subprocess.check_output(["dfu-programmer", self.MCU, "erase"], stderr=subprocess.STDOUT)

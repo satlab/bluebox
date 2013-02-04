@@ -209,9 +209,13 @@ static void do_rx(int direction, unsigned int vWalue)
 
 static void do_fw_revision(int direction, unsigned int vWalue)
 {
+	char fwrev[9];
+
 	if (direction == ENDPOINT_DIR_IN) {
-		Endpoint_Write_Control_Stream_LE(conf.fw_revision,
-						 strlen(conf.fw_revision));
+		memset(fwrev, ' ', 9);
+		snprintf(fwrev, 9, "%s", conf.fw_revision);
+		fwrev[8] = '\0';
+		Endpoint_Write_Control_Stream_LE(fwrev, 8);
 	}
 }
 

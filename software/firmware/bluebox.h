@@ -35,6 +35,11 @@
 
 #include <LUFA/Drivers/USB/USB.h>
 
+/* Git revision */
+#ifndef FW_REVISION
+#define FW_REVISION "unknown"
+#endif
+
 /* Control requests */
 #define REQUEST_REGISTER	0x01
 #define REQUEST_FREQUENCY 	0x02
@@ -49,6 +54,8 @@
 #define REQUEST_BITRATE		0x0B
 #define REQUEST_TX		0x0C
 #define REQUEST_RX		0x0D
+#define REQUEST_SERIALNUMBER	0xFC
+#define REQUEST_FWREVISION	0xFD
 #define REQUEST_RESET		0xFE
 #define REQUEST_DFU		0xFF
 
@@ -134,9 +141,11 @@ struct bluebox_config {
 	char callsign[CALLSIGN_LENGTH];
 	uint32_t tx;
 	uint32_t rx;
+	char *fw_revision;
 };
 
 extern struct bluebox_config conf;
+extern uint32_t serialno __attribute__((section(".eeprom")));
 
 void SetupHardware(void);
 void EVENT_USB_Device_ControlRequest(void);

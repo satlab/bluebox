@@ -63,7 +63,10 @@ struct bluebox_config conf = {
 	.training_symbol = TRAINING_SYMBOL,
 	.tx = 0,
 	.rx = 0,
+	.fw_revision = FW_REVISION,
 };
+
+uint32_t serialno __attribute__((section(".eeprom")));
 
 static void setup_hardware(void)
 {
@@ -204,6 +207,27 @@ static void do_rx(int direction, unsigned int vWalue)
 	rf_config_single(uint32_t, rx);
 }
 
+static void do_fw_revision(int direction, unsigned int vWalue)
+{
+	if (direction == ENDPOINT_DIR_IN) {
+		Endpoint_Write_Control_Stream_LE(conf.fw_revision,
+						 strlen(conf.fw_revision));
+	}
+}
+
+static void do_serialnumber(int direction, unsigned int vWalue)
+{
+	uint32_t snum;
+
+	if (direction == ENDPOINT_DIR_OUT) {
+		Endpoint_Read_Control_Stream_LE(&snum, sizeof(snum));
+		eeprom_write_dword(&serialno, snum);
+	} else if (direction == ENDPOINT_DIR_IN) {
+		snum = eeprom_read_dword(&serialno);
+		Endpoint_Write_Control_Stream_LE(&snum, sizeof(snum));
+	}
+}
+
 static void do_control_request(int direction)
 {
 	switch (USB_ControlRequest.bRequest) {
@@ -245,6 +269,12 @@ static void do_control_request(int direction)
 		break;
 	case REQUEST_RX:
 		do_rx(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_SERIALNUMBER:
+		do_serialnumber(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_FWREVISION:
+		do_fw_revision(direction, USB_ControlRequest.wValue);
 		break;
 	case REQUEST_RESET:
 		reboot();

@@ -20,6 +20,8 @@
  * THE SOFTWARE.
  */
 
+#include <avr/eeprom.h>
+
 #include "Descriptors.h"
 #include "bluebox.h"
 
@@ -104,20 +106,37 @@ const USB_Descriptor_String_t PROGMEM BlueBox_ProductString = {
 	.UnicodeString          = L"BlueBox"
 };
 
-const USB_Descriptor_String_t PROGMEM BlueBox_SerialString = {
-	.Header                 = {.Size = USB_STRING_LEN(5), .Type = DTYPE_String},
-	.UnicodeString          = L"0001A"
+USB_Descriptor_String_t BlueBox_SerialString = {
+	.Header                 = {.Size = USB_STRING_LEN(8), .Type = DTYPE_String},
+	.UnicodeString          = L"00000000"
 };
+
+static void format_serial(uint32_t serial, uint16_t *output)
+{
+	int i;
+	char sstr[9];
+
+	snprintf(sstr, 9, "%08lx", serial);
+	sstr[8] = '\0';
+
+	for (i = 0; i < 8; i++)
+		output[i] = cpu_to_le16(sstr[i]);
+
+}
 
 uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 				    const uint8_t wIndex,
-				    const void** const DescriptorAddress)
+				    const void **const DescriptorAddress,
+				    uint8_t *DescriptorMemorySpace)
 {
+	uint32_t snum;
 	const uint8_t DescriptorType   = (wValue >> 8);
 	const uint8_t DescriptorNumber = (wValue & 0xFF);
 
 	const void *Address = NULL;
 	uint16_t Size = NO_DESCRIPTOR;
+
+	*DescriptorMemorySpace = MEMSPACE_FLASH;
 
 	switch (DescriptorType) {
 	case DTYPE_Device:
@@ -145,7 +164,12 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 				break;
 			case 0x03:
 				Address = &BlueBox_SerialString;
-				Size    = pgm_read_byte(&BlueBox_SerialString.Header.Size);
+				Size    = BlueBox_SerialString.Header.Size;
+
+				snum = eeprom_read_dword(&serialno);
+				format_serial(snum, ((uint16_t *) &BlueBox_SerialString.UnicodeString));
+
+				*DescriptorMemorySpace = MEMSPACE_RAM;
 				break;
 		}
 

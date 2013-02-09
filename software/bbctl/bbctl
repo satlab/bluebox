@@ -513,10 +513,10 @@ epilog="See '%(prog)s help <command>' for more information on a specific command
 def main():
 	global enable_colors
 	parser = argparse.ArgumentParser(description=desc, epilog=epilog, formatter_class=SubcommandHelpFormatter)
-	parser.add_argument("-i", metavar="<index>", dest="index", default=0, type=int, help="select specific BlueBox device")
+	parser.add_argument("-i", metavar="<index>", dest="index", default=None, type=int, help="select specific BlueBox device at index")
+	parser.add_argument("-s", metavar="<serial>", dest="serial", default=None, help="select specific BlueBox device with serial")
 	parser.add_argument("-t", metavar="<timeout>", dest="timeout", type=int, default=10000, help="set transfer timeout in ms")
 	parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose output")
-	parser.add_argument("-w", "--wait", action="store_true", help="wait for device if not connected")
 	parser.add_argument("-c", "--no-color", action="store_false", dest="color", help="disable color output")
 	subparsers = parser.add_subparsers(dest="subparser", title="The available subcommands are", metavar="<command>")
 
@@ -551,7 +551,7 @@ def main():
 	enable_colors = args.color
 
 	try:
-		bb = bluebox.Bluebox(index=args.index, wait=args.wait, timeout=args.timeout)
+		bb = bluebox.Bluebox(index=args.index, serial=args.serial, timeout=args.timeout)
 	except KeyboardInterrupt:
 		print()
 		sys.exit(0)

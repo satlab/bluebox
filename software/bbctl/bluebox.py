@@ -111,22 +111,33 @@ class Bluebox(object):
 	DATALEN 		= 501
 	DATAEPSIZE		= 512
 	DATAFMT			= "<HHhhBH{0}s".format(DATALEN)
-	
-	def __init__(self, index=0, wait=False, timeout=0):
-		self.timeout = timeout
-		self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT, find_all=True)
-		if len(self.dev) < index + 1:
-			raise Exception("No BlueBox at index {0}".format(index))
-		else:
-			self.dev = self.dev[index]
 
-		if self.dev is None:
-			if not wait:
-				raise Exception("Device not found")
-			print("waiting for device ...")
-			while self.dev is None:
-				time.sleep(0.1)
-				self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
+	def find_bluebox(self, index=None, serial=None):
+		devs = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT, find_all=True)
+		
+		if len(devs) < 1:
+			raise Exception("No devices found")
+
+		if serial is not None:
+			for dev in devs:
+				if usb.util.get_string(dev, 100, dev.iSerialNumber) == serial:
+					return dev
+			raise Exception("No BlueBox with serial {0} found".format(serial))
+		elif index is not None:
+			if len(devs) < index + 1:
+				raise Exception("No BlueBox at index {0}".format(index))
+			return devs[index]
+		else:
+			return devs[0]
+
+
+	def __init__(self, index=None, serial=None, timeout=0):
+		self.timeout = timeout
+
+		if index is not None and serial is not None:
+			raise Exception("Use either -s or -i but not both")
+		
+		self.dev = self.find_bluebox(index, serial)
 
 		if platform.system() != "Windows" and  self.dev.is_kernel_driver_active(0) is True:
 			self.dev.detach_kernel_driver(0)

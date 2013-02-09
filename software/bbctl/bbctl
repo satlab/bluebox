@@ -180,10 +180,10 @@ def signal(args, bb):
 @argument('-r', '--retransmit', dest="retransmit", help="Enable retransmission of received data", action='store_true')
 def receive(args, bb):
 	count = 0
+
 	if args.decode:
-		if not args.key:
-			subcommands[args.subparser]["parser"].error("-d requires a key passed with -k")
 		ph = fec.PacketHandler(args.key)
+
 	while True:
 		bit_corr = 0
 		byte_corr = 0
@@ -223,8 +223,6 @@ def transmit(args, bb):
 	rx_count = 0
 
 	if args.encode or args.decode:
-		if not args.key:
-			subcommands[args.subparser]["parser"].error("-e/-d requires a key passed with -k")
 		ph = fec.PacketHandler(args.key)
 
 	while continuous:

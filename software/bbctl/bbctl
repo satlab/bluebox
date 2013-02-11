@@ -187,7 +187,7 @@ def receive(args, bb):
 	while True:
 		bit_corr = 0
 		byte_corr = 0
-		data, rssi, freq = bb.receive()
+		data, rssi, freq = bb.receive(100)
 		if data is None:
 			continue
 

@@ -240,16 +240,6 @@ class Bluebox(object):
 		training = struct.unpack("<H", training)[0]
 		return training
 
-	def set_training_ms(self, ms):
-		bitrate = self.get_bitrate()
-		trainbytes = (ms * bitrate) / 1000 / 8
-		self.training(trainbytes)
-	
-	def get_training_ms(self):
-		bitrate = self.get_bitrate()
-		trainbytes = self.get_training()
-		return (trainbytes * 8 * 1000) / bitrate
-
 	def set_serialnumber(self, serial):
 		serial = struct.pack("<I", serial)
 		self._ctrl_write(self.REQUEST_SERIALNUMBER, serial)

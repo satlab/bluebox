@@ -84,6 +84,8 @@
 #define TRAINING_SYMBOL		0x55
 #define TRAINING_MS		200
 #define TRAINING_INTER_MS	200
+#define PTT_DELAY_HIGH		100
+#define PTT_DELAY_LOW		100
 
 /* AAUSAT3 packet format */
 #define CALLSIGN		"OZ3CUB"
@@ -144,6 +146,8 @@ struct bluebox_config {
 	char callsign[CALLSIGN_LENGTH];
 	uint32_t tx;
 	uint32_t rx;
+	uint16_t ptt_delay_high;
+	uint16_t ptt_delay_low;
 	char *fw_revision;
 };
 

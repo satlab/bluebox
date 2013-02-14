@@ -408,7 +408,7 @@ void adf_set_rx_mode(void)
 		adf_write_reg(&rx_conf.r4_reg);
 	}
 
-	ptt_low();
+	ptt_low(conf.ptt_delay_low);
 	led_off(LED_TRANSMIT);
 
 	adf_state = ADF_RX;
@@ -422,7 +422,7 @@ void adf_set_tx_mode(void)
 		adf_pa_state = ADF_PA_ON;
 	}
 
-	ptt_high();
+	ptt_high(conf.ptt_delay_high);
 	led_on(LED_TRANSMIT);
 
 	if (adf_state == ADF_RX) {

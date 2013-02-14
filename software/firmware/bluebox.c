@@ -42,7 +42,8 @@
 	}
 
 struct bluebox_config conf = {
-	.freq = FREQUENCY,
+	.tx_freq = FREQUENCY,
+	.rx_freq = FREQUENCY,
 	.csma_rssi = CSMA_RSSI,
 	.bitrate = BAUD_RATE,
 	.modindex = MOD_INDEX,
@@ -130,9 +131,28 @@ static void do_rxtx_mode(int direction, unsigned int wValue)
 		adf_set_rx_mode();
 }
 
-static void do_frequency(int direction, unsigned int vWalue)
+static void do_tx_frequency(int direction, unsigned int vWalue)
 {
-	rf_config_single(uint32_t, freq);
+	rf_config_single(uint32_t, tx_freq);
+}
+
+static void do_rx_frequency(int direction, unsigned int vWalue)
+{
+	rf_config_single(uint32_t, rx_freq);
+}
+
+static void do_frequency(int direction, unsigned int wValue)
+{
+	uint32_t freq;
+
+	if (direction == ENDPOINT_DIR_OUT) {
+		Endpoint_Read_Control_Stream_LE(&freq, sizeof(freq));
+		conf.tx_freq = freq;
+		conf.rx_freq = freq;
+		adf_configure();
+	} else if (direction == ENDPOINT_DIR_IN) {
+		Endpoint_Write_Control_Stream_LE(&conf.rx_freq, sizeof(conf.rx_freq)); \
+	}
 }
 
 static void do_modindex(int direction, unsigned int vWalue)
@@ -238,11 +258,11 @@ static void do_control_request(int direction)
 	case REQUEST_REGISTER:
 		do_register(direction, USB_ControlRequest.wValue);
 		break;
-	case REQUEST_RXTX_MODE:
-		do_rxtx_mode(direction, USB_ControlRequest.wValue);
-		break;
 	case REQUEST_FREQUENCY:
 		do_frequency(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_RXTX_MODE:
+		do_rxtx_mode(direction, USB_ControlRequest.wValue);
 		break;
 	case REQUEST_MODINDEX:
 		do_modindex(direction, USB_ControlRequest.wValue);
@@ -273,6 +293,12 @@ static void do_control_request(int direction)
 		break;
 	case REQUEST_RX:
 		do_rx(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_TX_FREQUENCY:
+		do_tx_frequency(direction, USB_ControlRequest.wValue);
+		break;
+	case REQUEST_RX_FREQUENCY:
+		do_rx_frequency(direction, USB_ControlRequest.wValue);
 		break;
 	case REQUEST_SERIALNUMBER:
 		do_serialnumber(direction, USB_ControlRequest.wValue);

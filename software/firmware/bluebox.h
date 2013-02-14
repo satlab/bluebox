@@ -54,6 +54,8 @@
 #define REQUEST_BITRATE		0x0B
 #define REQUEST_TX		0x0C
 #define REQUEST_RX		0x0D
+#define REQUEST_TX_FREQUENCY	0x0E
+#define REQUEST_RX_FREQUENCY	0x0F
 #define REQUEST_SERIALNUMBER	0xFC
 #define REQUEST_FWREVISION	0xFD
 #define REQUEST_RESET		0xFE
@@ -120,7 +122,8 @@ struct data_buffer {
 #define FLAG_TX_READY		0x02
 
 struct bluebox_config {
-	uint32_t freq;
+	uint32_t tx_freq;
+	uint32_t rx_freq;
 	int16_t csma_rssi;
 	uint16_t bitrate;
 	uint8_t modindex;

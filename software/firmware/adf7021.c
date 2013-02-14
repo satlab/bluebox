@@ -503,8 +503,8 @@ void adf_test_off(void)
 void adf_configure(void)
 {
 	adf_set_rx_sync_word(conf.sw, conf.swlen, conf.swtol);
-	adf_init_rx_mode(conf.bitrate, conf.modindex, conf.freq, conf.if_bw);
-	adf_init_tx_mode(conf.bitrate, conf.modindex, conf.freq);
+	adf_init_rx_mode(conf.bitrate, conf.modindex, conf.rx_freq, conf.if_bw);
+	adf_init_tx_mode(conf.bitrate, conf.modindex, conf.tx_freq);
 	adf_afc_on(conf.afc_range, conf.afc_ki, conf.afc_kp);
 	adf_set_rx_mode();
 }

@@ -408,8 +408,8 @@ void adf_set_rx_mode(void)
 		adf_write_reg(&rx_conf.r4_reg);
 	}
 
-	ptt_low(conf.ptt_delay_low);
 	led_off(LED_TRANSMIT);
+	ptt_low(conf.ptt_delay_low);
 
 	adf_state = ADF_RX;
 }

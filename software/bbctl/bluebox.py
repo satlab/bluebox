@@ -58,6 +58,8 @@ class Bluebox(object):
 	REQUEST_BITRATE		= 0x0B
 	REQUEST_TX		= 0x0C
 	REQUEST_RX		= 0x0D
+	REQUEST_TX_FREQUENCY	= 0x0E
+	REQUEST_RX_FREQUENCY	= 0x0F
 
 	# Bootloader Control
 	REQUEST_SERIALNUMBER	= 0xFC
@@ -170,6 +172,24 @@ class Bluebox(object):
 	def reg_write(self, reg, value):
 		value = struct.pack("<I", (value & ~0xff) | reg)
 		self._ctrl_write(self.REQUEST_REGISTER, value, wValue=reg)
+
+	def set_tx_frequency(self, freq):
+		freq = struct.pack("<I", freq)
+		self._ctrl_write(self.REQUEST_TX_FREQUENCY, freq)
+
+	def get_tx_frequency(self):
+		freq = self._ctrl_read(self.REQUEST_TX_FREQUENCY, 4)
+		freq = struct.unpack("<I", freq)[0]
+		return freq
+
+	def set_rx_frequency(self, freq):
+		freq = struct.pack("<I", freq)
+		self._ctrl_write(self.REQUEST_RX_FREQUENCY, freq)
+
+	def get_rx_frequency(self):
+		freq = self._ctrl_read(self.REQUEST_RX_FREQUENCY, 4)
+		freq = struct.unpack("<I", freq)[0]
+		return freq
 
 	def set_frequency(self, freq):
 		freq = struct.pack("<I", freq)

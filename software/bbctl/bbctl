@@ -319,11 +319,25 @@ def rxmode(args, bb):
 
 @subcommand("get or set device frequency")
 @argument('frequency', help="requested frequency", type=parse_frequency, nargs="?", default=None)
+@argument('-t', '--transmit', action="store_true", help="only set transmit frequency")
+@argument('-r', '--receive', action="store_true", help="only set transmit frequency")
 def frequency(args, bb):
 	if args.frequency is not None:
-		bb.set_frequency(args.frequency)
+		if not args.transmit and not args.receive:
+			bb.set_frequency(args.frequency)
+		else:
+			if args.transmit:
+				bb.set_tx_frequency(args.frequency)
+			if args.receive:
+				bb.set_rx_frequency(args.frequency)
 	else:
-		print(bb.get_frequency())
+		if not args.transmit and not args.receive:
+			print(bb.get_frequency())
+		else:
+			if args.receive:
+				print(bb.get_rx_frequency())
+			elif args.transmit:
+				print(bb.get_tx_frequency())
 
 @subcommand("get or set device bitrate")
 @argument('bitrate', type=int, help="requested bitrate", nargs="?", default=None)

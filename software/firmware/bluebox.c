@@ -36,12 +36,13 @@
 	if (direction == ENDPOINT_DIR_OUT) {					\
 		Endpoint_Read_Control_Stream_LE(&_name, sizeof(_name));		\
 		conf._name = _name;						\
-		adf_configure();						\
+		conf_set_reconf();						\
 	} else if (direction == ENDPOINT_DIR_IN) {				\
 		Endpoint_Write_Control_Stream_LE(&conf._name, sizeof(conf._name)); \
 	}
 
 struct bluebox_config conf = {
+	.flags = CONF_FLAG_NONE,
 	.tx_freq = FREQUENCY,
 	.rx_freq = FREQUENCY,
 	.csma_rssi = CSMA_RSSI,
@@ -68,6 +69,21 @@ struct bluebox_config conf = {
 	.rx = 0,
 	.fw_revision = FW_REVISION,
 };
+
+static inline bool conf_should_reconf(void)
+{
+	return (conf.flags & CONF_FLAG_RECONFIGURE);
+}
+
+static inline void conf_set_reconf(void)
+{
+	conf.flags |= CONF_FLAG_RECONFIGURE;
+}
+
+static inline void conf_clear_reconf(void)
+{
+	conf.flags &= ~CONF_FLAG_RECONFIGURE;
+}
 
 uint32_t serialno __attribute__((section(".eeprom")));
 
@@ -151,7 +167,7 @@ static void do_frequency(int direction, unsigned int wValue)
 		Endpoint_Read_Control_Stream_LE(&freq, sizeof(freq));
 		conf.tx_freq = freq;
 		conf.rx_freq = freq;
-		adf_configure();
+		conf_set_reconf();
 	} else if (direction == ENDPOINT_DIR_IN) {
 		Endpoint_Write_Control_Stream_LE(&conf.rx_freq, sizeof(conf.rx_freq)); \
 	}
@@ -189,7 +205,7 @@ static void do_acf(int direction, unsigned int vWalue)
 		conf.afc_range = req.range ? req.range : conf.afc_range;
 		conf.afc_kp = req.p ? req.p : conf.afc_kp;
 		conf.afc_ki = req.i ? req.i : conf.afc_ki;
-		adf_configure();
+		conf_set_reconf();
 	} else if (direction == ENDPOINT_DIR_IN) {
 		req.state = conf.afc_enable;
 		req.range = conf.afc_range;
@@ -335,7 +351,7 @@ static bool csma_tx_allowed(void)
 	return (rssi <= conf.csma_rssi);
 }
 
-static void bluebox_task(void)
+static void tx_task(void)
 {
 	if (USB_DeviceState != DEVICE_STATE_Configured)
 		return;
@@ -355,6 +371,18 @@ static void bluebox_task(void)
 			Endpoint_ClearOUT();
 		}
 	}
+}
+
+static void conf_task(void)
+{
+	cli();
+
+	if (!spi_busy() && conf_should_reconf()) {
+		adf_configure();
+		conf_clear_reconf();
+	}
+
+	sei();
 }
 
 void EVENT_USB_Device_ControlRequest(void)
@@ -391,9 +419,10 @@ int main(void)
 	swd_init();
 	swd_enable();
 
-	for (;;) {
-		spi_rx_task();
-		bluebox_task();
+	while (1) {
+		conf_task();
+		rx_task();
+		tx_task();
 		USB_USBTask();
 	}
 }

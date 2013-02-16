@@ -120,10 +120,16 @@ struct data_buffer {
 	uint8_t data[DATA_LENGTH];
 };
 
+/* Data buffer flags */
 #define FLAG_RX_READY		0x01
 #define FLAG_TX_READY		0x02
 
+/* Config flags */
+#define CONF_FLAG_NONE		0x00
+#define CONF_FLAG_RECONFIGURE	0x01
+
 struct bluebox_config {
+	uint8_t flags;
 	uint32_t tx_freq;
 	uint32_t rx_freq;
 	int16_t csma_rssi;

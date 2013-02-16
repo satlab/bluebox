@@ -173,7 +173,12 @@ out:
 	return allow;
 }
 
-void spi_rx_task(void)
+bool spi_busy(void)
+{
+	return (spi_mode != SPI_MODE_IDLE);
+}
+
+void rx_task(void)
 {
 	if (data[back].flags & FLAG_RX_READY) {
 		Endpoint_SelectEndpoint(IN_EPADDR);

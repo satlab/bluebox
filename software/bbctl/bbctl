@@ -127,7 +127,7 @@ def bar(value, minimum=-130, maximum=-47, width=40):
 	value = min(value, maximum)
 
 	progress = (value+abs(minimum))*width/(maximum+abs(minimum))
-	bar = "[" + progress * "#" + (width-progress) * " " + "]"
+	bar = "[" + progress * "|" + (width-progress) * " " + "]"
 
 	return bar
 
@@ -156,6 +156,7 @@ def rssi(args, bb):
 
 @subcommand("continuously show RSSI reading")
 @argument("-t", metavar="samples", dest="samples", type=int, help="number of samples per frequency", default=10)
+@argument("-w", "--waterfall", action="store_true", help="enable waterfall signal output")
 def signal(args, bb):
 	minimum = -130
 	maximum = -47
@@ -163,8 +164,10 @@ def signal(args, bb):
 
 	while True:
 		try:
+			prefix =  "" if args.waterfall else "\r"
+			postfix = "\n" if args.waterfall else ""
 			rssi = bb.rssi(args.samples)
-			sys.stdout.write("\r{0} {1} dBm ".format(bar(rssi), rssi))
+			sys.stdout.write("{0}{1} {2} dBm {3}".format(prefix, bar(rssi), rssi, postfix))
 			sys.stdout.flush()
 			time.sleep(0.1)
 		except KeyboardInterrupt:

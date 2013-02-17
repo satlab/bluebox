@@ -111,12 +111,12 @@
 
 /* This must be 512 bytes */
 struct data_buffer {
-	uint16_t size;
-	uint16_t progress;
-	int16_t rssi;
-	int16_t freq;
-	uint8_t flags;
-	uint16_t training;
+	volatile uint16_t size;
+	volatile uint16_t progress;
+	volatile int16_t rssi;
+	volatile int16_t freq;
+	volatile uint8_t flags;
+	volatile uint16_t training;
 	uint8_t data[DATA_LENGTH];
 };
 

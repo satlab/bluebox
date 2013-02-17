@@ -162,7 +162,7 @@ void spi_tx_start(void);
 void spi_tx_done(void);
 int spi_tx_wait(void);
 bool spi_tx_prepare(void);
-bool spi_tx_busy(void);
+bool spi_busy(void);
 void rx_task(void);
 
 extern struct data_buffer data[NUM_BUFS];

@@ -20,6 +20,16 @@ Go to software/bbctl and run:
 
 Note that you need gcc to compile the FEC extension module.
 
+Requirements
+------------
+
+bbctl uses pyusb1.0, which is not yet available in sone linux distributions.
+
+Follow these easy steps to install from source:
+
+	git clone https://github.com/walac/pyusb.git
+	cd pyusb
+	sudo python2 setup.py install
 
 How to build and flash the firmware
 -----------------------------------

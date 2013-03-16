@@ -475,34 +475,40 @@ def help(args, parser):
 def list(args):
 	index = 0
 
-	header = "Index  USB path  Frequency  Bitrate  Modindex  Power  Train  Transmit  Receive  Firmware  Serial"
-	fields = "{0:<5}  {1:<03}:{2:<03}   {3:<9}  {4:<7}  {5:<8}  {6:<5}  {7:<5}  {8:<8}  {9:<7}  {10:<8}  {11:08x}"
+	fields = "{0}: BlueBox #{1:08x} (USB path {2:<03}:{3:<03})\n" + \
+		 "   Frequency: {4} Hz\n" + \
+		 "   Modindex:  {5}\n" + \
+		 "   Bitrate:   {6} bps\n" + \
+		 "   Power:     {7}\n" + \
+		 "   Training:  {8} ms\n" + \
+		 "   Transmit:  {9}\n" + \
+		 "   Received:  {10}\n" + \
+		 "   Firmware:  {11}"
 
 	while True:
 		try:
 			bb = bluebox.Bluebox(index=index)
-			if index == 0:
-				print(header)
+			#if index == 0:
+			#	print(header)
 			print(fields.format(
 				index,
+				bb.get_serialnumber(),
 				bb.dev.bus,
 				bb.dev.address,
 				bb.get_frequency(),
-				bb.get_bitrate(),
 				bb.get_modindex(),
+				bb.get_bitrate(),
 				bb.get_power(),
 				bb.get_training(),
 				bb.get_transmitted(),
 				bb.get_received(),
-				bb.get_fwrevision(),
-				bb.get_serialnumber()))
+				bb.get_fwrevision()))
 		except Exception as e:
 			if index == 0:
 				print("Error: no BlueBox found")
 			break
 		finally:
 			index += 1
-
 
 class SubcommandHelpFormatter(argparse.RawDescriptionHelpFormatter):
 	def _format_action(self, action):

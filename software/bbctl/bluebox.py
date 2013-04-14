@@ -58,8 +58,12 @@ class Bluebox(object):
 	REQUEST_BITRATE		= 0x0B
 	REQUEST_TX		= 0x0C
 	REQUEST_RX		= 0x0D
+	REQUEST_TX_FREQUENCY	= 0x0E
+	REQUEST_RX_FREQUENCY	= 0x0F
 
 	# Bootloader Control
+	REQUEST_SERIALNUMBER	= 0xFC
+	REQUEST_FWREVISION	= 0xFD
 	REQUEST_RESET		= 0xFE
 	REQUEST_DFU		= 0xFF
 
@@ -109,22 +113,33 @@ class Bluebox(object):
 	DATALEN 		= 501
 	DATAEPSIZE		= 512
 	DATAFMT			= "<HHhhBH{0}s".format(DATALEN)
-	
-	def __init__(self, index=0, wait=False, timeout=0):
-		self.timeout = timeout
-		self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT, find_all=True)
-		if len(self.dev) < index + 1:
-			raise Exception("No BlueBox at index {0}".format(index))
-		else:
-			self.dev = self.dev[index]
 
-		if self.dev is None:
-			if not wait:
-				raise Exception("Device not found")
-			print("waiting for device ...")
-			while self.dev is None:
-				time.sleep(0.1)
-				self.dev = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT)
+	def find_bluebox(self, index=None, serial=None):
+		devs = usb.core.find(idVendor=self.VENDOR, idProduct=self.PRODUCT, find_all=True)
+		
+		if len(devs) < 1:
+			raise Exception("No devices found")
+
+		if serial is not None:
+			for dev in devs:
+				if usb.util.get_string(dev, 100, dev.iSerialNumber) == serial:
+					return dev
+			raise Exception("No BlueBox with serial {0} found".format(serial))
+		elif index is not None:
+			if len(devs) < index + 1:
+				raise Exception("No BlueBox at index {0}".format(index))
+			return devs[index]
+		else:
+			return devs[0]
+
+
+	def __init__(self, index=None, serial=None, timeout=0):
+		self.timeout = timeout
+
+		if index is not None and serial is not None:
+			raise Exception("Use either -s or -i but not both")
+		
+		self.dev = self.find_bluebox(index, serial)
 
 		if platform.system() != "Windows" and  self.dev.is_kernel_driver_active(0) is True:
 			self.dev.detach_kernel_driver(0)
@@ -157,6 +172,24 @@ class Bluebox(object):
 	def reg_write(self, reg, value):
 		value = struct.pack("<I", (value & ~0xff) | reg)
 		self._ctrl_write(self.REQUEST_REGISTER, value, wValue=reg)
+
+	def set_tx_frequency(self, freq):
+		freq = struct.pack("<I", freq)
+		self._ctrl_write(self.REQUEST_TX_FREQUENCY, freq)
+
+	def get_tx_frequency(self):
+		freq = self._ctrl_read(self.REQUEST_TX_FREQUENCY, 4)
+		freq = struct.unpack("<I", freq)[0]
+		return freq
+
+	def set_rx_frequency(self, freq):
+		freq = struct.pack("<I", freq)
+		self._ctrl_write(self.REQUEST_RX_FREQUENCY, freq)
+
+	def get_rx_frequency(self):
+		freq = self._ctrl_read(self.REQUEST_RX_FREQUENCY, 4)
+		freq = struct.unpack("<I", freq)[0]
+		return freq
 
 	def set_frequency(self, freq):
 		freq = struct.pack("<I", freq)
@@ -227,15 +260,14 @@ class Bluebox(object):
 		training = struct.unpack("<H", training)[0]
 		return training
 
-	def set_training_ms(self, ms):
-		bitrate = self.get_bitrate()
-		trainbytes = (ms * bitrate) / 1000 / 8
-		self.training(trainbytes)
-	
-	def get_training_ms(self):
-		bitrate = self.get_bitrate()
-		trainbytes = self.get_training()
-		return (trainbytes * 8 * 1000) / bitrate
+	def set_serialnumber(self, serial):
+		serial = struct.pack("<I", serial)
+		self._ctrl_write(self.REQUEST_SERIALNUMBER, serial)
+
+	def get_serialnumber(self):
+		serial = self._ctrl_read(self.REQUEST_SERIALNUMBER, 4)
+		serial = struct.unpack("<I", serial)[0]
+		return serial
 
 	def version(self):
 		return self.reg_read(self.READBACK_VERSION)
@@ -282,7 +314,7 @@ class Bluebox(object):
 		if self.dev is None:
 			raise Exception("Failed to set device in DFU mode")
 
-	def update(self, filename):
+	def flash(self, filename):
 		self.dfu()
 
 		subprocess.check_output(["dfu-programmer", self.MCU, "erase"], stderr=subprocess.STDOUT)
@@ -300,6 +332,11 @@ class Bluebox(object):
 	def reset(self):
 		try: self._ctrl_write(self.REQUEST_RESET, None, 0)
 		except: pass
+
+	def get_fwrevision(self):
+		fwrev = self._ctrl_read(self.REQUEST_FWREVISION, 8)
+		fwrev = struct.unpack("<8s", fwrev)[0]
+		return fwrev
 
 	def transmit(self, text, timeout=None):
 		if not timeout:

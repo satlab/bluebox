@@ -10,7 +10,6 @@
 # --------------------------------------
 
 # Run "make help" for target help.
-
 MCU          = atmega32u4
 ARCH         = AVR8
 BOARD        = USER
@@ -22,6 +21,8 @@ SRC          = $(TARGET).c Descriptors.c bootloader.c spi.c adf7021.c $(LUFA_SRC
 LUFA_PATH    = LUFA
 CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -IConfig/ -Wall -Wextra -Wno-unused-parameter
 LD_FLAGS     =
+
+CC_FLAGS    += -DFW_REVISION="\"$(shell git describe --abbrev=7 --dirty=+ --always)\""
 
 # Default target
 all:

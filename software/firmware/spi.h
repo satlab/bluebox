@@ -162,8 +162,8 @@ void spi_tx_start(void);
 void spi_tx_done(void);
 int spi_tx_wait(void);
 bool spi_tx_prepare(void);
-void spi_rx_task(void);
-bool spi_tx_in_progress(void);
+bool spi_busy(void);
+void rx_task(void);
 
 extern struct data_buffer data[NUM_BUFS];
 extern uint8_t front;

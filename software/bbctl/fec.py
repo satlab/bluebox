@@ -83,14 +83,14 @@ bbfec.ccsds_xor_sequence.restype = None
 TESTDATA = "8c1a48c0043fab4d3e790e2274af0a479c013770a2f889df13fefd825417b794470f240399b8562a8316f576861d7e72cf74bb29fcc0b6d6a5ce3659e8ee4d412bf95b7040459400ff3528f7f792c5f70c95eaf2574767eab615e26df977fc5ee837eda2eca7c601f4d568c9eca9d6f8ef015f67b98a79b2d8092fd60d2cee25".decode("hex")
 
 class PacketHandler():
-	def __init__(self, key, viterbi=True, rs=True, randomize=True):
+	def __init__(self, key=None, viterbi=True, rs=True, randomize=True):
 		self.ccsds_sequence = ctypes.create_string_buffer(MAX_FEC_LENGTH)
 
 		bbfec.ccsds_generate_sequence(self.ccsds_sequence, MAX_FEC_LENGTH)
 
 		self.vp = bbfec.create_viterbi(MAX_FEC_LENGTH * BITS_PER_BYTE)
 
-		self.key = hashlib.sha1(key).digest()[:HMAC_KEY_LENGTH]
+		self.key = hashlib.sha1(key).digest()[:HMAC_KEY_LENGTH] if key else None
 		self.viterbi = viterbi
 		self.rs = rs
 		self.randomize = randomize
@@ -177,11 +177,11 @@ class PacketHandler():
 
 	def deframe(self, data):
 		data, bit_corr, byte_corr = self.decode(data)
-		data = self.hmac_verify(data)
+		data = self.hmac_verify(data) if self.key else data
 		return data, bit_corr, byte_corr
 
 	def frame(self, data):
-		data = self.hmac_append(data)
+		data = self.hmac_append(data) if self.key else data
 		data = self.encode(data)
 		return data
 

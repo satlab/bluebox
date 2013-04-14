@@ -35,6 +35,11 @@
 
 #include <LUFA/Drivers/USB/USB.h>
 
+/* Git revision */
+#ifndef FW_REVISION
+#define FW_REVISION "unknown"
+#endif
+
 /* Control requests */
 #define REQUEST_REGISTER	0x01
 #define REQUEST_FREQUENCY 	0x02
@@ -49,6 +54,10 @@
 #define REQUEST_BITRATE		0x0B
 #define REQUEST_TX		0x0C
 #define REQUEST_RX		0x0D
+#define REQUEST_TX_FREQUENCY	0x0E
+#define REQUEST_RX_FREQUENCY	0x0F
+#define REQUEST_SERIALNUMBER	0xFC
+#define REQUEST_FWREVISION	0xFD
 #define REQUEST_RESET		0xFE
 #define REQUEST_DFU		0xFF
 
@@ -75,6 +84,8 @@
 #define TRAINING_SYMBOL		0x55
 #define TRAINING_MS		200
 #define TRAINING_INTER_MS	200
+#define PTT_DELAY_HIGH		100
+#define PTT_DELAY_LOW		100
 
 /* AAUSAT3 packet format */
 #define CALLSIGN		"OZ3CUB"
@@ -100,20 +111,27 @@
 
 /* This must be 512 bytes */
 struct data_buffer {
-	uint16_t size;
-	uint16_t progress;
-	int16_t rssi;
-	int16_t freq;
-	uint8_t flags;
-	uint16_t training;
+	volatile uint16_t size;
+	volatile uint16_t progress;
+	volatile int16_t rssi;
+	volatile int16_t freq;
+	volatile uint8_t flags;
+	volatile uint16_t training;
 	uint8_t data[DATA_LENGTH];
 };
 
+/* Data buffer flags */
 #define FLAG_RX_READY		0x01
 #define FLAG_TX_READY		0x02
 
+/* Config flags */
+#define CONF_FLAG_NONE		0x00
+#define CONF_FLAG_RECONFIGURE	0x01
+
 struct bluebox_config {
-	uint32_t freq;
+	uint8_t flags;
+	uint32_t tx_freq;
+	uint32_t rx_freq;
 	int16_t csma_rssi;
 	uint16_t bitrate;
 	uint8_t modindex;
@@ -134,9 +152,13 @@ struct bluebox_config {
 	char callsign[CALLSIGN_LENGTH];
 	uint32_t tx;
 	uint32_t rx;
+	uint16_t ptt_delay_high;
+	uint16_t ptt_delay_low;
+	char *fw_revision;
 };
 
 extern struct bluebox_config conf;
+extern uint32_t serialno __attribute__((section(".eeprom")));
 
 void SetupHardware(void);
 void EVENT_USB_Device_ControlRequest(void);

@@ -349,7 +349,7 @@ void adf_afc_on(unsigned char range, unsigned char ki, unsigned char kp)
 {
 	/* write R10, turn AFC on */
 	sys_conf.r10.afc_en = 1;
-	sys_conf.r10.afc_scaling_factor = 431; /* (2^24 * 500 / XTAL_FREQ) */
+	sys_conf.r10.afc_scaling_factor = 524; /* (2^24 * 500 / XTAL_FREQ) */
 	sys_conf.r10.ki = ki;
 	sys_conf.r10.kp = kp;
 	sys_conf.r10.afc_range = range;
@@ -408,8 +408,8 @@ void adf_set_rx_mode(void)
 		adf_write_reg(&rx_conf.r4_reg);
 	}
 
-	ptt_low();
 	led_off(LED_TRANSMIT);
+	ptt_low(conf.ptt_delay_low);
 
 	adf_state = ADF_RX;
 }
@@ -422,7 +422,7 @@ void adf_set_tx_mode(void)
 		adf_pa_state = ADF_PA_ON;
 	}
 
-	ptt_high();
+	ptt_high(conf.ptt_delay_high);
 	led_on(LED_TRANSMIT);
 
 	if (adf_state == ADF_RX) {
@@ -503,8 +503,8 @@ void adf_test_off(void)
 void adf_configure(void)
 {
 	adf_set_rx_sync_word(conf.sw, conf.swlen, conf.swtol);
-	adf_init_rx_mode(conf.bitrate, conf.modindex, conf.freq, conf.if_bw);
-	adf_init_tx_mode(conf.bitrate, conf.modindex, conf.freq);
+	adf_init_rx_mode(conf.bitrate, conf.modindex, conf.rx_freq, conf.if_bw);
+	adf_init_tx_mode(conf.bitrate, conf.modindex, conf.tx_freq);
 	adf_afc_on(conf.afc_range, conf.afc_ki, conf.afc_kp);
 	adf_set_rx_mode();
 }

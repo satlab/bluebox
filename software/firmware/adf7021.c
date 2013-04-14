@@ -293,7 +293,7 @@ void adf_init_rx_mode(unsigned int data_rate, uint8_t mod_index, unsigned long f
 
 	rx_conf.r0.rx_on = 1;
 	rx_conf.r0.uart_mode = 1;
-	rx_conf.r0.muxout = 5;
+	rx_conf.r0.muxout = 2;
 	rx_conf.r0.int_n = n_int;
 	rx_conf.r0.frac_n = n_frac;
 	rx_conf.r0.address_bits = 0;
@@ -325,7 +325,7 @@ void adf_init_tx_mode(unsigned int data_rate, uint8_t mod_index, unsigned long f
 
 	tx_conf.r0.rx_on = 0;
 	tx_conf.r0.uart_mode = 1;
-	tx_conf.r0.muxout = 7;
+	tx_conf.r0.muxout = 2;
 	tx_conf.r0.int_n = n_int;
 	tx_conf.r0.frac_n = n_frac;
 	tx_conf.r0.address_bits = 0;

@@ -9,6 +9,7 @@
 #define LED_TRANSMIT		0x04
 #define LED_ALL			(LED_POWER | LED_RECEIVE | LED_TRANSMIT)
 
+#if defined(BBSTANDARD)
 /* Power LED pins */
 #define PORT_LED_POWER		PORTF
 #define DIR_LED_POWER		DDRF
@@ -23,6 +24,22 @@
 #define PORT_LED_TRANSMIT	PORTF
 #define DIR_LED_TRANSMIT	DDRF
 #define PIN_LED_TRANSMIT	0
+#elif defined(BBMICRO)
+/* Power LED pins */
+#define PORT_LED_POWER		PORTB
+#define DIR_LED_POWER		DDRB
+#define PIN_LED_POWER		6
+
+/* Receive LED pins */
+#define PORT_LED_RECEIVE	PORTB
+#define DIR_LED_RECEIVE		DDRB
+#define PIN_LED_RECEIVE		7
+
+/* Transmit LED pins */
+#define PORT_LED_TRANSMIT	PORTB
+#define DIR_LED_TRANSMIT	DDRB
+#define PIN_LED_TRANSMIT	4
+#endif
 
 static inline void led_on(unsigned int leds)
 {
@@ -30,8 +47,13 @@ static inline void led_on(unsigned int leds)
 		PORT_LED_POWER &= ~_BV(PIN_LED_POWER);
 	if (leds & LED_RECEIVE)
 		PORT_LED_RECEIVE &= ~_BV(PIN_LED_RECEIVE);
+#if defined(BBSTANDARD)
 	if (leds & LED_TRANSMIT)
 		PORT_LED_TRANSMIT &= ~_BV(PIN_LED_TRANSMIT);
+#elif defined(BBMICRO)
+	if (leds & LED_TRANSMIT)
+		PORT_LED_TRANSMIT |= _BV(PIN_LED_TRANSMIT);
+#endif
 }
 
 static inline void led_off(unsigned int leds)
@@ -40,8 +62,13 @@ static inline void led_off(unsigned int leds)
 		PORT_LED_POWER |= _BV(PIN_LED_POWER);
 	if (leds & LED_RECEIVE)
 		PORT_LED_RECEIVE |= _BV(PIN_LED_RECEIVE);
+#if defined(BBSTANDARD)
 	if (leds & LED_TRANSMIT)
 		PORT_LED_TRANSMIT |= _BV(PIN_LED_TRANSMIT);
+#elif defined(BBMICRO)
+	if (leds & LED_TRANSMIT)
+		PORT_LED_TRANSMIT &= ~_BV(PIN_LED_TRANSMIT);
+#endif
 }
 
 static inline void led_toggle(unsigned int leds)
@@ -59,6 +86,7 @@ static inline void led_init(void)
 	DIR_LED_POWER 	 |= _BV(PIN_LED_POWER);
 	DIR_LED_RECEIVE  |= _BV(PIN_LED_RECEIVE);
 	DIR_LED_TRANSMIT |= _BV(PIN_LED_TRANSMIT);
+
 	led_off(LED_ALL);
 }
 

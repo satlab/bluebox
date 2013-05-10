@@ -27,10 +27,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-//#define ADF_PORT 	PORTE
-//#define ADF_PORT_IN 	PINE
-//#define ADF_PORT_DIR 	DDRE
-
+#if defined(BBSTANDARD)
 #define ADF_PORT_SWD		PORTE
 #define ADF_PORT_IN_SWD		PINE
 #define ADF_PORT_DIR_SWD	DDRE
@@ -65,6 +62,42 @@
 #define ADF_PORT_IN_CE		PIND
 #define ADF_PORT_DIR_CE		DDRD
 #define ADF_CE 			7
+#elif defined(BBMICRO)
+#define ADF_PORT_SWD		PORTB
+#define ADF_PORT_IN_SWD		PINB
+#define ADF_PORT_DIR_SWD	DDRB
+#define ADF_SWD 		5
+
+#define ADF_PORT_SCLK		PORTC
+#define ADF_PORT_IN_SCLK	PINC
+#define ADF_PORT_DIR_SCLK	DDRC
+#define ADF_SCLK 		2
+
+#define ADF_PORT_SREAD		PORTC
+#define ADF_PORT_IN_SREAD	PINC
+#define ADF_PORT_DIR_SREAD	DDRC
+#define ADF_SREAD 		4
+
+#define ADF_PORT_SDATA		PORTC
+#define ADF_PORT_IN_SDATA	PINC
+#define ADF_PORT_DIR_SDATA	DDRC
+#define ADF_SDATA 		5
+
+#define ADF_PORT_SLE		PORTC
+#define ADF_PORT_IN_SLE		PINC
+#define ADF_PORT_DIR_SLE	DDRC
+#define ADF_SLE 		6
+
+#define ADF_PORT_MUXOUT		PORTD
+#define ADF_PORT_IN_MUXOUT	PIND
+#define ADF_PORT_DIR_MUXOUT	DDRD
+#define ADF_MUXOUT 		1
+
+#define ADF_PORT_CE		PORTD
+#define ADF_PORT_IN_CE		PIND
+#define ADF_PORT_DIR_CE		DDRD
+#define ADF_CE 			5
+#endif
 
 typedef union
 {

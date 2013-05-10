@@ -105,11 +105,11 @@
 #define BITS_PER_BYTE		8
 
 /* Buffer configuration */
-#define TOTAL_LENGTH		512
+#define TOTAL_LENGTH		300
 #define DATA_LENGTH		(TOTAL_LENGTH - sizeof(uint16_t) * 5 - sizeof(uint8_t) * 1)
 #define NUM_BUFS		2
 
-/* This must be 512 bytes */
+/* This must be 300 bytes */
 struct data_buffer {
 	volatile uint16_t size;
 	volatile uint16_t progress;

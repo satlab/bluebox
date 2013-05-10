@@ -207,7 +207,11 @@ void flip_tx_buffers(void)
 	flip_buffers();
 }
 
+#if defined(BBSTANDARD)
 ISR(INT6_vect)
+#elif defined(BBMICRO)
+ISR(PCINT0_vect)
+#endif
 {
 	spi_rx_start();
 }

@@ -9,8 +9,10 @@
 #         LUFA Project Makefile.
 # --------------------------------------
 
+# Use micro for BlueBox micro
+BBBOARD     ?= standard
+
 # Run "make help" for target help.
-MCU          = atmega32u4
 ARCH         = AVR8
 BOARD        = USER
 F_CPU        = 16000000
@@ -19,8 +21,17 @@ OPTIMIZATION = s
 TARGET       = bluebox
 SRC          = $(TARGET).c Descriptors.c bootloader.c spi.c adf7021.c $(LUFA_SRC_USB) $(LUFA_SRC_USBCLASS)
 LUFA_PATH    = LUFA
-CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -IConfig/ -Wall -Wextra -Wno-unused-parameter
+CC_FLAGS    += -DUSE_LUFA_CONFIG_HEADER -IConfig/ -Wall -Wextra -Wno-unused-parameter
 LD_FLAGS     =
+
+ifeq ($(BBBOARD),standard)
+MCU          = atmega32u4
+CC_FLAGS    += -DBBSTANDARD
+endif
+ifeq ($(BBBOARD),micro)
+MCU          = atmega32u2
+CC_FLAGS    += -DBBMICRO
+endif
 
 CC_FLAGS    += -DFW_REVISION="\"$(shell git describe --abbrev=7 --dirty=+ --always)\""
 

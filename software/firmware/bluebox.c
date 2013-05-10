@@ -419,6 +419,8 @@ int main(void)
 	swd_init();
 	swd_enable();
 
+	led_on(LED_POWER);
+
 	while (1) {
 		conf_task();
 		rx_task();

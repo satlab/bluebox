@@ -25,20 +25,32 @@
 
 static inline void swd_init(void)
 {
+#if defined(BBSTANDARD)
 	/* Setup SWD interrupt on RISING edge */
 	EICRB |= _BV(ISC60) | _BV(ISC61);
+#elif defined(BBMICRO)
+	PCICR  |= _BV(PCIE0);
+#endif
 }
 
 static inline void swd_enable(void)
 {
+#if defined(BBSTANDARD)
 	/* Enable external interrupt on PIN6 */
 	EIMSK |= _BV(INT6);
+#elif defined(BBMICRO)
+	PCMSK0 |= _BV(PCINT5);
+#endif
 }
 
 static inline void swd_disable(void)
 {
+#if defined(BBSTANDARD)
 	/* Disable external interrupt on PIN6 */
 	EIMSK &= ~(_BV(INT6));
+#elif defined(BBMICRO)
+	PCMSK0 &= ~(_BV(PCINT5));
+#endif
 }
 
 /** Size of the circular receive buffer, must be power of 2 and max 256! */

@@ -102,8 +102,13 @@ const USB_Descriptor_String_t PROGMEM BlueBox_ManufacturerString = {
 };
 
 const USB_Descriptor_String_t PROGMEM BlueBox_ProductString = {
+#if defined(BBSTANDARD)
 	.Header                 = {.Size = USB_STRING_LEN(7), .Type = DTYPE_String},
 	.UnicodeString          = L"BlueBox"
+#elif defined(BBMICRO)
+	.Header                 = {.Size = USB_STRING_LEN(13), .Type = DTYPE_String},
+	.UnicodeString		= L"BlueBox Micro"
+#endif
 };
 
 USB_Descriptor_String_t BlueBox_SerialString = {

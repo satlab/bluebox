@@ -102,17 +102,6 @@ static void setup_hardware(void)
 	spi_init_config(SPI_SLAVE | SPI_MSB_FIRST);
 }
 
-static void flash_leds(void)
-{
-	led_on(LED_ALL);
-	delay_ms(75);
-	led_off(LED_ALL);
-	delay_ms(100);
-	led_on(LED_ALL);
-	delay_ms(75);
-	led_off(LED_ALL);
-}
-
 static void callsign_init(char *cs)
 {
 	int i;
@@ -410,7 +399,7 @@ int main(void)
 
 	callsign_init(conf.callsign);
 
-	flash_leds();
+	led_off(LED_ALL);
 
 	adf_set_power_on(XTAL_FREQ);
 	adf_configure();

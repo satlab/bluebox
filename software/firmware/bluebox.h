@@ -70,8 +70,8 @@
 #define TX_TIMEOUT_DELAY	10U
 #define RX_WAIT_TIMEOUT		120U
 #define CSMA_RSSI		-50
-#define BAUD_RATE		2400
-#define MOD_INDEX		8
+#define BAUD_RATE		4800
+#define MOD_INDEX		4
 #define PA_SETTING		8
 #define AFC_RANGE		10
 #define AFC_KI			11
